@@ -85,59 +85,21 @@ st.markdown("""
         color: white;
         box-shadow: 0 4px 8px rgba(255,85,85,0.2);
     }
-    .ai-title {
-        font-size: 1.5rem;
-        font-weight: bold;
-        margin-bottom: 15px;
-        border-bottom: 2px solid #444;
-        padding-bottom: 10px;
-    }
-    .ai-stat {
-        display: flex;
-        justify-content: space-between;
-        padding: 8px;
-        background-color: rgba(255,255,255,0.1);
-        border-radius: 8px;
-        margin: 5px 0;
-    }
-    .ai-label {
-        color: #aaa;
-    }
-    .ai-value {
-        font-weight: bold;
-        font-size: 1.2rem;
-    }
-    .ai-value-high {
-        color: #00ff88;
-        font-weight: bold;
-        font-size: 1.2rem;
-    }
-    .ai-value-mid {
-        color: #ffaa00;
-        font-weight: bold;
-        font-size: 1.2rem;
-    }
-    .ai-conclusion {
-        margin-top: 15px;
-        padding: 15px;
-        background-color: rgba(255,255,255,0.05);
-        border-radius: 10px;
-        font-style: italic;
-        border-left: 4px solid #1f77b4;
-    }
-    .metric-container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        margin: 10px 0;
-    }
-    .metric-item {
-        flex: 1;
-        min-width: 120px;
-        background: rgba(255,255,255,0.05);
-        padding: 10px;
-        border-radius: 8px;
+    .watchlist-header {
+        background: linear-gradient(135deg, #1e3c72, #2a5298);
+        padding: 20px;
+        border-radius: 15px;
+        margin: 20px 0;
         text-align: center;
+        color: white;
+    }
+    .top3-card {
+        background-color: #1e1e1e;
+        padding: 15px;
+        border-radius: 10px;
+        border-left: 5px solid #00ff88;
+        text-align: center;
+        height: 100%;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -256,8 +218,7 @@ if "Open = Low" in scan_mode:
         estimasi_menit = estimasi_detik / 60
         
         # Tampilkan warning
-        warning_box = st.container()
-        with warning_box:
+        with st.container():
             if estimasi_menit > 2:
                 st.warning(f"⏱️ **Memproses {len(stocks_to_scan)} saham**\n\nEstimasi waktu: **{estimasi_menit:.1f} menit**\n\nHarap sabar ya bro! Jangan refresh halaman.")
             else:
@@ -354,7 +315,7 @@ if "Open = Low" in scan_mode:
             fig.update_layout(height=500)
             st.plotly_chart(fig, use_container_width=True)
             
-            # ========== FITUR AI DENGAN TAMPILAN KEREN ==========
+            # ========== ANALISIS AI ==========
             st.markdown("## 🤖 Analisis AI")
             st.markdown("Analisis mendalam untuk top 5 saham dengan pola terbaik:")
             
@@ -373,55 +334,162 @@ if "Open = Low" in scan_mode:
                 # Panggil analisis AI
                 analysis = analyze_pattern(row.to_dict())
                 
-                # Tampilkan card keren
+                # Tampilkan card
                 st.markdown(f"""
                 <div class="{card_class}">
-                    <div class="ai-title">
-                        📊 {row['saham']} 
-                        <span style="float: right; font-size: 1rem; background-color: rgba(255,255,255,0.2); padding: 5px 10px; border-radius: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h2 style="color: white; margin: 0;">📊 {row['saham']}</h2>
+                        <span style="background-color: rgba(255,255,255,0.2); padding: 5px 15px; border-radius: 20px; font-size: 0.9rem;">
                             {prob_text}
                         </span>
                     </div>
                     
-                    <div class="metric-container">
-                        <div class="metric-item">
-                            <div class="ai-label">🎯 Probabilitas</div>
-                            <div class="ai-value-high">{row['probabilitas']:.1f}%</div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 10px; margin: 15px 0;">
+                        <div style="flex: 1; min-width: 120px; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; text-align: center;">
+                            <div style="color: #aaa;">🎯 Probabilitas</div>
+                            <div style="color: #00ff88; font-weight: bold; font-size: 1.3rem;">{row['probabilitas']:.1f}%</div>
                         </div>
-                        <div class="metric-item">
-                            <div class="ai-label">💰 Rata-rata Gain</div>
-                            <div class="ai-value-mid">{row['rata_rata_kenaikan']:.1f}%</div>
+                        <div style="flex: 1; min-width: 120px; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; text-align: center;">
+                            <div style="color: #aaa;">💰 Rata Gain</div>
+                            <div style="color: #ffaa00; font-weight: bold; font-size: 1.3rem;">{row['rata_rata_kenaikan']:.1f}%</div>
                         </div>
-                        <div class="metric-item">
-                            <div class="ai-label">📈 Max Gain</div>
-                            <div class="ai-value-high">{row['max_kenaikan']:.1f}%</div>
+                        <div style="flex: 1; min-width: 120px; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; text-align: center;">
+                            <div style="color: #aaa;">📈 Max Gain</div>
+                            <div style="color: #00ff88; font-weight: bold; font-size: 1.3rem;">{row['max_kenaikan']:.1f}%</div>
                         </div>
-                        <div class="metric-item">
-                            <div class="ai-label">📊 Frekuensi</div>
-                            <div class="ai-value">{row['frekuensi']}x</div>
+                        <div style="flex: 1; min-width: 120px; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; text-align: center;">
+                            <div style="color: #aaa;">📊 Frekuensi</div>
+                            <div style="color: white; font-weight: bold; font-size: 1.3rem;">{row['frekuensi']}x</div>
                         </div>
                     </div>
                     
-                    <div class="ai-stat">
-                        <span class="ai-label">📅 Pattern Terakhir:</span>
-                        <span class="ai-value">{row.get('last_pattern_date', 'N/A')} (Gain: {row['last_kenaikan']:.1f}%)</span>
-                    </div>
-                    
-                    <div class="ai-stat">
-                        <span class="ai-label">📈 Trend Terkini:</span>
-                        <span class="ai-value">{row.get('recent_trend', 'Normal')}</span>
-                    </div>
-                    
-                    <div class="ai-conclusion">
-                        <strong>📋 KESIMPULAN AI:</strong><br>
-                        {analysis.replace('•', '▶').replace('\n', '<br>')}
+                    <div style="background-color: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; margin-top: 10px;">
+                        <strong style="color: #1f77b4;">📋 KESIMPULAN AI:</strong><br>
+                        <span style="color: #ddd;">{analysis.replace('•', '▶').replace('\n', '<br>')}</span>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
             
-            # Export
-            st.markdown("### 📥 Export Data")
-            if st.button("📊 Export ke Excel", use_container_width=True):
+            # ========== WATCHLIST GENERATOR ==========
+            st.markdown("## 📋 Watchlist Generator")
+            st.markdown("Top saham untuk dipantau besok (fokus pada yang sering Open=Low dengan gain tertinggi):")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                min_gain_filter = st.slider("🎯 Minimal gain rata-rata (%)", 3, 10, 5, key="min_gain")
+            with col2:
+                top_n = st.number_input("📊 Jumlah saham dalam watchlist", 5, 30, 15, key="top_n")
+            
+            # Filter berdasarkan gain minimal
+            df_watchlist = df_results[df_results['rata_rata_kenaikan'] >= min_gain_filter].copy()
+            
+            if len(df_watchlist) > 0:
+                # Hitung skor gabungan
+                df_watchlist['skor'] = (
+                    (df_watchlist['probabilitas'] / df_watchlist['probabilitas'].max()) * 50 +
+                    (df_watchlist['rata_rata_kenaikan'] / df_watchlist['rata_rata_kenaikan'].max()) * 50
+                )
+                
+                # Ambil top N
+                df_watchlist = df_watchlist.nlargest(top_n, 'skor')
+                
+                # Header watchlist
+                st.markdown(f"""
+                <div class="watchlist-header">
+                    <h2 style="color: white; margin: 0;">📋 WATCHLIST TRADING</h2>
+                    <p style="color: #a8d8ff; font-size: 1.2rem; margin: 10px 0 0 0;">{datetime.now().strftime('%d %B %Y')}</p>
+                    <p style="color: #ffaa00; margin: 10px 0 0 0;">Pantau 15 menit pertama! Open=Low = Siap eksekusi 🎯</p>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # Buat tabel watchlist
+                watchlist_data = []
+                for i, (idx, row) in enumerate(df_watchlist.iterrows()):
+                    if row['probabilitas'] >= 20 and row['rata_rata_kenaikan'] >= 7:
+                        rekom = "🔥 PRIORITAS UTAMA"
+                    elif row['probabilitas'] >= 15 and row['rata_rata_kenaikan'] >= 5:
+                        rekom = "⚡ LAYAK DICOBA"
+                    else:
+                        rekom = "📌 PANTAU"
+                    
+                    watchlist_data.append({
+                        "Rank": i + 1,
+                        "Saham": row['saham'],
+                        "Probabilitas": f"{row['probabilitas']:.1f}%",
+                        "Gain Rata": f"{row['rata_rata_kenaikan']:.1f}%",
+                        "Max Gain": f"{row['max_kenaikan']:.1f}%",
+                        "Frekuensi": f"{row['frekuensi']}x",
+                        "Rekomendasi": rekom
+                    })
+                
+                # Tampilkan dataframe
+                watchlist_df = pd.DataFrame(watchlist_data)
+                st.dataframe(
+                    watchlist_df,
+                    use_container_width=True,
+                    hide_index=True,
+                    height=400
+                )
+                
+                # TOP 3 HIGHLIGHT
+                st.markdown("### 🏆 TOP 3 SAHAM TERBAIK")
+                cols = st.columns(3)
+                
+                for i, (idx, row) in enumerate(df_watchlist.head(3).iterrows()):
+                    with cols[i]:
+                        st.markdown(f"""
+                        <div class="top3-card">
+                            <h3 style="color: #00ff88; margin: 0;">#{i+1}</h3>
+                            <h2 style="color: white; margin: 10px 0;">{row['saham']}</h2>
+                            <table style="width: 100%; color: white; margin: 15px 0;">
+                                <tr><td style="text-align: left;">📊 Probabilitas</td><td style="text-align: right;"><b style="color: #00ff88;">{row['probabilitas']:.1f}%</b></td></tr>
+                                <tr><td style="text-align: left;">💰 Gain Rata</td><td style="text-align: right;"><b style="color: #ffaa00;">{row['rata_rata_kenaikan']:.1f}%</b></td></tr>
+                                <tr><td style="text-align: left;">📈 Max Gain</td><td style="text-align: right;"><b style="color: #00ff88;">{row['max_kenaikan']:.1f}%</b></td></tr>
+                                <tr><td style="text-align: left;">📅 Frekuensi</td><td style="text-align: right;"><b>{row['frekuensi']}x</b></td></tr>
+                            </table>
+                            <p style="color: #aaa; font-size: 0.9rem;">Pantau besok pagi!</p>
+                        </div>
+                        """, unsafe_allow_html=True)
+                
+                # Export buttons
+                st.markdown("### 📥 Export Watchlist")
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    csv_data = watchlist_df.to_csv(index=False).encode('utf-8')
+                    st.download_button(
+                        "📊 Download CSV",
+                        data=csv_data,
+                        file_name=f"watchlist_{datetime.now().strftime('%Y%m%d')}.csv",
+                        mime="text/csv",
+                        use_container_width=True
+                    )
+                
+                with col2:
+                    excel_data = export_to_excel(watchlist_df)
+                    st.download_button(
+                        "📈 Download Excel",
+                        data=excel_data,
+                        file_name=f"watchlist_{datetime.now().strftime('%Y%m%d')}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        use_container_width=True
+                    )
+                
+                # Tips
+                st.info("""
+                💡 **Tips Penggunaan Watchlist:**
+                1. Simpan watchlist ini di HP/laptop lo
+                2. Besok pagi jam 8:45, buka watchlist
+                3. Pantau 15 menit pertama (9:00-9:15)
+                4. Begitu ada saham Open=Low, langsung eksekusi
+                5. Fokus ke yang bertuliskan 🔥 PRIORITAS UTAMA
+                """)
+            else:
+                st.warning(f"Tidak ada saham dengan gain minimal {min_gain_filter}%. Coba turunkan filternya.")
+            
+            # Export hasil scanning utama
+            st.markdown("### 📥 Export Data Scanning")
+            if st.button("📊 Export Hasil Scanning ke Excel", use_container_width=True):
                 excel_data = export_to_excel(display_df)
                 st.download_button(
                     label="💾 Download Excel",
@@ -459,7 +527,7 @@ elif "Low Float" in scan_mode:
             help="Minimal volume rata-rata (0 = abaikan)"
         )
     
-    # Opsi mode scanning untuk low float
+    # Opsi mode scanning
     scan_option = st.radio(
         "🔍 Mode Scanning:",
         ["⚡ Cepat (50 saham)", "🐢 Lengkap (Semua saham)"],
@@ -468,7 +536,6 @@ elif "Low Float" in scan_mode:
     )
     
     if st.button("🚀 SCAN LOW FLOAT", type="primary", use_container_width=True):
-        # Tentukan stocks yang akan discan
         if selected_stocks:
             stocks_to_scan = selected_stocks
         else:
@@ -502,7 +569,6 @@ elif "Low Float" in scan_mode:
                     'Volume', 'Volatilitas (%)', 'Score'
                 ]
                 
-                # Format untuk tampilan
                 display_df_display = display_df.copy()
                 display_df_display['Public Float (%)'] = display_df_display['Public Float (%)'].apply(lambda x: f"{x:.2f}%")
                 display_df_display['Volume'] = display_df_display['Volume'].apply(lambda x: f"{x:,.0f}")
@@ -520,7 +586,6 @@ elif "Low Float" in scan_mode:
                 col1, col2 = st.columns(2)
                 
                 with col1:
-                    # Pie chart kategori
                     category_counts = df_results['category'].value_counts()
                     fig = px.pie(
                         values=category_counts.values,
@@ -530,7 +595,6 @@ elif "Low Float" in scan_mode:
                     st.plotly_chart(fig, use_container_width=True)
                 
                 with col2:
-                    # Scatter plot
                     fig = px.scatter(
                         df_results,
                         x='public_float',
@@ -538,60 +602,9 @@ elif "Low Float" in scan_mode:
                         size='volume_avg',
                         hover_data=['saham'],
                         color='category',
-                        title="Public Float vs Volatilitas",
-                        labels={
-                            'public_float': 'Public Float (%)',
-                            'volatility': 'Volatilitas (%)'
-                        }
+                        title="Public Float vs Volatilitas"
                     )
                     st.plotly_chart(fig, use_container_width=True)
-                
-                # ========== FITUR AI UNTUK LOW FLOAT ==========
-                st.markdown("## 🤖 Analisis Low Float")
-                st.markdown("Analisis untuk saham Low Float terbaik:")
-                
-                for idx, (i, row) in enumerate(df_results.head(3).iterrows()):
-                    # Tentukan kelas card berdasarkan kategori
-                    if 'Ultra' in row['category']:
-                        card_class = "ai-card-high"
-                    elif 'Very' in row['category']:
-                        card_class = "ai-card-mid"
-                    else:
-                        card_class = "ai-card-low"
-                    
-                    # Panggil analisis AI
-                    analysis = analyze_low_float(row.to_dict())
-                    
-                    st.markdown(f"""
-                    <div class="{card_class}">
-                        <div class="ai-title">
-                            🔥 {row['saham']} - {row['category']}
-                            <span style="float: right; font-size: 1rem; background-color: rgba(255,255,255,0.2); padding: 5px 10px; border-radius: 20px;">
-                                Score: {row['low_float_score']:.1f}
-                            </span>
-                        </div>
-                        
-                        <div class="metric-container">
-                            <div class="metric-item">
-                                <div class="ai-label">📊 Public Float</div>
-                                <div class="ai-value-high">{row['public_float']:.2f}%</div>
-                            </div>
-                            <div class="metric-item">
-                                <div class="ai-label">📈 Volatilitas</div>
-                                <div class="ai-value-mid">{row['volatility']:.2f}%</div>
-                            </div>
-                            <div class="metric-item">
-                                <div class="ai-label">📊 Volume</div>
-                                <div class="ai-value">{row['volume_avg']:,.0f}</div>
-                            </div>
-                        </div>
-                        
-                        <div class="ai-conclusion">
-                            <strong>📋 KESIMPULAN AI:</strong><br>
-                            {analysis.replace('•', '▶').replace('\n', '<br>')}
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
                 
                 # Export
                 if st.button("📊 Export ke Excel", use_container_width=True):
