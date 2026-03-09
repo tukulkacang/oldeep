@@ -4,35 +4,28 @@ from datetime import datetime
 
 def export_to_excel(dataframe, sheet_name="Hasil Scanning"):
     """
-    Export DataFrame ke Excel
+    Export DataFrame ke Excel - VERSI SUPER SIMPLE
     """
     try:
-        # Buat buffer untuk menyimpan file Excel
+        # Buat buffer
         output = BytesIO()
         
-        # Buat Excel writer
-        with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            dataframe.to_excel(writer, sheet_name=sheet_name, index=False)
+        # Langsung to_excel tanpa writer ribet
+        dataframe.to_excel(output, index=False, sheet_name=sheet_name, engine='openpyxl')
         
-        # Kembalikan ke awal buffer
+        # Kembalikan ke awal
         output.seek(0)
         
+        # Balikin datanya
         return output.getvalue()
-    
+        
     except Exception as e:
-        print(f"Error export Excel: {e}")
+        print(f"ERROR: {e}")
         return None
 
 def format_number(num):
-    """Format angka untuk display"""
+    """Format angka"""
     try:
-        if num >= 1e9:
-            return f"{num/1e9:.2f} B"
-        elif num >= 1e6:
-            return f"{num/1e6:.2f} M"
-        elif num >= 1e3:
-            return f"{num/1e3:.2f} K"
-        else:
-            return str(num)
+        return f"{num:,.0f}"
     except:
         return str(num)
