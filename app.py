@@ -58,6 +58,13 @@ st.markdown("""
         border-left: 4px solid #ffc107;
         border-radius: 0.25rem;
     }
+    .ai-box {
+        padding: 1rem;
+        background-color: #e8f4f8;
+        border-left: 4px solid #1f77b4;
+        border-radius: 0.25rem;
+        margin: 0.5rem 0;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -255,7 +262,8 @@ if "Open = Low" in scan_mode:
             st.dataframe(
                 display_df_display,
                 use_container_width=True,
-                height=500
+                height=500,
+                hide_index=True
             )
             
             # Visualisasi
@@ -271,6 +279,19 @@ if "Open = Low" in scan_mode:
             )
             fig.update_layout(height=500)
             st.plotly_chart(fig, use_container_width=True)
+            
+            # ========== FITUR AI AKTIF ==========
+            st.markdown("### 🤖 Analisis AI")
+            st.markdown("Analisis mendalam untuk top 5 saham dengan pola terbaik:")
+            
+            # Buat 5 kolom atau pake expander
+            cols = st.columns(5)
+            for idx, (i, row) in enumerate(df_results.head(5).iterrows()):
+                with cols[idx]:
+                    with st.container():
+                        st.markdown(f"**{row['saham']}**")
+                        analysis = analyze_pattern(row.to_dict())
+                        st.markdown(f'<div class="ai-box">{analysis}</div>', unsafe_allow_html=True)
             
             # Export
             st.markdown("### 📥 Export Data")
@@ -365,7 +386,8 @@ elif "Low Float" in scan_mode:
                 st.dataframe(
                     display_df_display,
                     use_container_width=True,
-                    height=500
+                    height=500,
+                    hide_index=True
                 )
                 
                 # Visualisasi
@@ -398,6 +420,18 @@ elif "Low Float" in scan_mode:
                     )
                     st.plotly_chart(fig, use_container_width=True)
                 
+                # ========== FITUR AI UNTUK LOW FLOAT ==========
+                st.markdown("### 🤖 Analisis AI")
+                st.markdown("Analisis untuk saham Low Float terbaik:")
+                
+                cols = st.columns(3)
+                for idx, (i, row) in enumerate(df_results.head(3).iterrows()):
+                    with cols[idx]:
+                        with st.container():
+                            st.markdown(f"**{row['saham']}**")
+                            analysis = analyze_low_float(row.to_dict())
+                            st.markdown(f'<div class="ai-box">{analysis}</div>', unsafe_allow_html=True)
+                
                 # Export
                 if st.button("📊 Export ke Excel", use_container_width=True):
                     excel_data = export_to_excel(display_df)
@@ -422,6 +456,6 @@ st.markdown("""
 <div style='text-align: center; color: #666; font-size: 0.9rem;'>
     <p>⚠️ <strong>Disclaimer:</strong> Data untuk tujuan edukasi, bukan rekomendasi investasi.</p>
     <p>Selalu lakukan analisis sendiri sebelum mengambil keputusan investasi.</p>
-    <p>📊 Data dari Yahoo Finance | ⏱️ Update: Real-time</p>
+    <p>📊 Data dari Yahoo Finance | ⏱️ Update: Real-time | 🤖 AI Analysis Aktif</p>
 </div>
 """, unsafe_allow_html=True)
