@@ -2,3 +2,6 @@ streamlit
 pandas
 yfinance
 openpyxl
+plotly
+numpy
+requests
