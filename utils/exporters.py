@@ -1,26 +1,26 @@
 import pandas as pd
 from io import BytesIO
-from datetime import datetime
 
 def export_to_excel(dataframe, sheet_name="Hasil Scanning"):
     """
-    Export DataFrame ke Excel - VERSI SUPER SIMPLE
+    Export DataFrame ke Excel - VERSI PALING SIMPLE
     """
     try:
-        # Buat buffer
+        # Buat file Excel di memory
         output = BytesIO()
         
-        # Langsung to_excel tanpa writer ribet
-        dataframe.to_excel(output, index=False, sheet_name=sheet_name, engine='openpyxl')
+        # Simpan dataframe ke Excel
+        dataframe.to_excel(output, index=False, engine='openpyxl')
         
-        # Kembalikan ke awal
+        # Kembali ke awal file
         output.seek(0)
         
-        # Balikin datanya
+        # Langsung return
         return output.getvalue()
         
     except Exception as e:
         print(f"ERROR: {e}")
+        # Return None kalo gagal
         return None
 
 def format_number(num):
