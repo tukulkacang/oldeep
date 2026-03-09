@@ -60,6 +60,24 @@ st.markdown("""
         text-align: center;
         color: white;
     }
+    .success-box {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        padding: 30px;
+        border-radius: 20px;
+        margin: 25px 0 35px 0;
+        text-align: center;
+        color: white;
+        border: 2px solid #ffd700;
+        box-shadow: 0 20px 40px rgba(102,126,234,0.4);
+        position: relative;
+        overflow: hidden;
+    }
+    .export-box {
+        background-color: #f0f2f6;
+        padding: 20px;
+        border-radius: 10px;
+        margin: 20px 0;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -225,10 +243,10 @@ if "Open = Low" in scan_mode:
             df_results = pd.DataFrame(results)
             df_results = df_results.sort_values('frekuensi', ascending=False).head(limit_saham)
             
-            # ========== SUCCESS BOX ELEGAN (FIX TOTAL) ==========
+            # ========== SUCCESS BOX ELEGAN ==========
             st.markdown(
                 f"""
-                <div style="background: linear-gradient(135deg, #667eea, #764ba2); padding: 30px; border-radius: 20px; margin: 25px 0 35px 0; text-align: center; color: white; border: 2px solid #ffd700; box-shadow: 0 20px 40px rgba(102,126,234,0.4); position: relative; overflow: hidden;">
+                <div class="success-box">
                     <div style="position: absolute; top: 10px; right: 20px; font-size: 1.5rem; opacity: 0.3;">✨</div>
                     <div style="position: absolute; bottom: 10px; left: 20px; font-size: 1.5rem; opacity: 0.3;">✨</div>
                     <h1 style="color: #ffd700; margin: 0; font-size: 3rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); letter-spacing: 2px;">✅ SCAN BERHASIL!</h1>
@@ -386,28 +404,32 @@ if "Open = Low" in scan_mode:
                     height=400
                 )
                 
-                # Export buttons
+                # Export buttons watchlist (INI YANG UDAH BERHASIL)
                 st.markdown("### 📥 Export Watchlist")
+                col_w1, col_w2 = st.columns(2)
                 
-                # Export CSV
-                csv_data = watchlist_df.to_csv(index=False).encode('utf-8')
-                st.download_button(
-                    label="📊 Download CSV",
-                    data=csv_data,
-                    file_name=f"watchlist_{datetime.now().strftime('%Y%m%d')}.csv",
-                    mime="text/csv",
-                    use_container_width=True
-                )
+                with col_w1:
+                    csv_data = watchlist_df.to_csv(index=False).encode('utf-8')
+                    st.download_button(
+                        label="📊 Download CSV",
+                        data=csv_data,
+                        file_name=f"watchlist_{datetime.now().strftime('%Y%m%d')}.csv",
+                        mime="text/csv",
+                        use_container_width=True
+                    )
                 
-                # Export Excel
-                excel_data = export_to_excel(watchlist_df)
-                st.download_button(
-                    label="📈 Download Excel",
-                    data=excel_data,
-                    file_name=f"watchlist_{datetime.now().strftime('%Y%m%d')}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True
-                )
+                with col_w2:
+                    excel_data = export_to_excel(watchlist_df)
+                    if excel_data:
+                        st.download_button(
+                            label="📈 Download Excel",
+                            data=excel_data,
+                            file_name=f"watchlist_{datetime.now().strftime('%Y%m%d')}.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            use_container_width=True
+                        )
+                    else:
+                        st.error("❌ Gagal bikin Excel")
                 
                 # Tips
                 st.info("""
@@ -421,34 +443,37 @@ if "Open = Low" in scan_mode:
             else:
                 st.warning(f"Tidak ada saham dengan gain minimal {min_gain_filter}%. Coba turunkan filternya.")
             
-            # Export hasil scanning utama
-                        # ========== EXPORT DATA ==========
+            # ========== EXPORT DATA SCANNING (YANG INI DIEDIT) ==========
             st.markdown("### 📥 Export Data Scanning")
             
-            # Tombol export simple
-            if st.button("📊 EXPORT KE EXCEL", use_container_width=True):
-                with st.spinner("Menyiapkan file Excel..."):
-                    try:
-                        # Ambil data yang mau diexport
-                        export_data = display_df.copy()
-                        
-                        # Export pake fungsi kita
-                        excel_file = export_to_excel(export_data)
-                        
-                        if excel_file:
-                            # Kasih tombol download
-                            st.download_button(
-                                label="💾 KLIK DOWNLOAD FILE",
-                                data=excel_file,
-                                file_name=f"hasil_scan_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
-                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                                use_container_width=True
-                            )
-                            st.success("File siap didownload!")
-                        else:
-                            st.error("Gagal bikin file Excel")
-                    except Exception as e:
-                        st.error(f"Error: {e}")
+            # PAKE CARA YANG SAMA PERSIS DENGAN WATCHLIST
+            col_scan1, col_scan2 = st.columns(2)
+            
+            with col_scan1:
+                # Export CSV (sama persis dengan watchlist)
+                csv_data_scan = display_df.to_csv(index=False).encode('utf-8')
+                st.download_button(
+                    label="📊 Download CSV",
+                    data=csv_data_scan,
+                    file_name=f"scan_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                    mime="text/csv",
+                    use_container_width=True
+                )
+            
+            with col_scan2:
+                # Export Excel (sama persis dengan watchlist)
+                excel_data_scan = export_to_excel(display_df)
+                if excel_data_scan:
+                    st.download_button(
+                        label="📈 Download Excel",
+                        data=excel_data_scan,
+                        file_name=f"scan_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        use_container_width=True
+                    )
+                else:
+                    st.error("❌ Gagal bikin Excel. Coba pake CSV aja.")
+                    
         else:
             st.markdown(
                 """
@@ -567,15 +592,30 @@ elif "Low Float" in scan_mode:
                 
                 # Export
                 st.markdown("### 📥 Export Data")
-                if st.button("📊 Export ke Excel", use_container_width=True):
-                    excel_data = export_to_excel(display_df)
+                col_exp1, col_exp2 = st.columns(2)
+                
+                with col_exp1:
+                    csv_data = display_df.to_csv(index=False).encode('utf-8')
                     st.download_button(
-                        label="💾 Download Excel",
-                        data=excel_data,
-                        file_name=f"low_float_scanner_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        label="📊 Download CSV",
+                        data=csv_data,
+                        file_name=f"low_float_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                        mime="text/csv",
                         use_container_width=True
                     )
+                
+                with col_exp2:
+                    excel_data = export_to_excel(display_df)
+                    if excel_data:
+                        st.download_button(
+                            label="📈 Download Excel",
+                            data=excel_data,
+                            file_name=f"low_float_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            use_container_width=True
+                        )
+                    else:
+                        st.error("❌ Gagal bikin Excel")
             else:
                 st.markdown(
                     """
