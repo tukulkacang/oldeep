@@ -334,7 +334,7 @@ if "Open = Low" in scan_mode:
                 # Panggil analisis AI
                 analysis = analyze_pattern(row.to_dict())
                 
-                # Tampilkan card
+                # Tampilkan card dengan HTML yang benar
                 st.markdown(f"""
                 <div class="{card_class}">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
@@ -385,13 +385,17 @@ if "Open = Low" in scan_mode:
             
             if len(df_watchlist) > 0:
                 # Hitung skor gabungan
-                df_watchlist['skor'] = (
-                    (df_watchlist['probabilitas'] / df_watchlist['probabilitas'].max()) * 50 +
-                    (df_watchlist['rata_rata_kenaikan'] / df_watchlist['rata_rata_kenaikan'].max()) * 50
-                )
-                
-                # Ambil top N
-                df_watchlist = df_watchlist.nlargest(top_n, 'skor')
+                if len(df_watchlist) > 0:
+                    max_prob = df_watchlist['probabilitas'].max()
+                    max_gain = df_watchlist['rata_rata_kenaikan'].max()
+                    
+                    df_watchlist['skor'] = (
+                        (df_watchlist['probabilitas'] / max_prob if max_prob > 0 else 0) * 50 +
+                        (df_watchlist['rata_rata_kenaikan'] / max_gain if max_gain > 0 else 0) * 50
+                    )
+                    
+                    # Ambil top N
+                    df_watchlist = df_watchlist.nlargest(top_n, 'skor')
                 
                 # Header watchlist
                 st.markdown(f"""
