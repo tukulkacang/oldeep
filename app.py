@@ -16,13 +16,14 @@ from utils.exporters import export_to_excel, format_number
 
 # ========== DATA PEMEGANG SAHAM (Update Maret 2026) ==========
 # Sumber: KSEI/BEI per 27 Februari 2026
-# Kebijakan baru: kepemilikan >1% terbuka untuk publik
+# Hanya menampilkan pemegang yang ADA DI FREE FLOAT (bukan pengendali/founder)
 
 SHAREHOLDER_DATA = {
     # PRAJOGO PANGESTU (Barito Pacific)
     'CUAN': {
         'pemegang': [
-            {'nama': 'Prajogo Pangestu', 'persen': 84.10, 'tipe': 'Founder', 'catatan': 'Pengendali', 'update': 'Feb 2026'},
+            # PENGENDALI (TIDAK DITAMPILKAN DI FREE FLOAT)
+            # {'nama': 'Prajogo Pangestu', 'persen': 84.10, 'tipe': 'Pengendali', 'catatan': 'TIDAK MASUK FREE FLOAT', 'update': 'Feb 2026'},
             {'nama': 'BPJS Ketenagakerjaan', 'persen': 1.02, 'tipe': 'Institusi', 'catatan': 'Masuk Q4 2025', 'update': 'Feb 2026'},
             {'nama': 'Vanguard', 'persen': 1.15, 'tipe': 'Asing', 'catatan': 'Nambah Jan 2026', 'update': 'Feb 2026'}
         ],
@@ -35,7 +36,7 @@ SHAREHOLDER_DATA = {
     },
     'BRPT': {
         'pemegang': [
-            {'nama': 'Prajogo Pangestu', 'persen': 71.37, 'tipe': 'Founder', 'catatan': 'Pengendali', 'update': 'Feb 2026'},
+            # {'nama': 'Prajogo Pangestu', 'persen': 71.37, 'tipe': 'Pengendali', 'catatan': 'TIDAK MASUK FREE FLOAT', 'update': 'Feb 2026'},
             {'nama': 'BPJS Ketenagakerjaan', 'persen': 1.22, 'tipe': 'Institusi', 'catatan': 'Nambah Feb 2026', 'update': 'Feb 2026'}
         ],
         'free_float': 27.41,
@@ -46,7 +47,7 @@ SHAREHOLDER_DATA = {
     },
     'TPIA': {
         'pemegang': [
-            {'nama': 'Prajogo Pangestu', 'persen': 5.03, 'tipe': 'Founder', 'catatan': 'Pengendali', 'update': 'Feb 2026'},
+            # {'nama': 'Prajogo Pangestu', 'persen': 5.03, 'tipe': 'Pengendali', 'catatan': 'TIDAK MASUK FREE FLOAT', 'update': 'Feb 2026'},
             {'nama': 'GIC Singapore', 'persen': 3.45, 'tipe': 'Asing', 'catatan': 'Masuk Jan 2026', 'update': 'Feb 2026'}
         ],
         'free_float': 91.52,
@@ -57,7 +58,7 @@ SHAREHOLDER_DATA = {
     # BOY THOHIR
     'TRIM': {
         'pemegang': [
-            {'nama': 'Boy Thohir', 'persen': 34.68, 'tipe': 'Founder', 'catatan': 'Pengendali', 'update': 'Feb 2026'},
+            # {'nama': 'Boy Thohir', 'persen': 34.68, 'tipe': 'Pengendali', 'catatan': 'TIDAK MASUK FREE FLOAT', 'update': 'Feb 2026'},
             {'nama': 'BPJS Ketenagakerjaan', 'persen': 2.15, 'tipe': 'Institusi', 'catatan': 'Nambah Des 2025', 'update': 'Feb 2026'}
         ],
         'free_float': 63.17,
@@ -66,7 +67,7 @@ SHAREHOLDER_DATA = {
     },
     'MDKA': {
         'pemegang': [
-            {'nama': 'Boy Thohir', 'persen': 7.46, 'tipe': 'Founder', 'catatan': 'Pengendali', 'update': 'Feb 2026'},
+            # {'nama': 'Boy Thohir', 'persen': 7.46, 'tipe': 'Pengendali', 'catatan': 'TIDAK MASUK FREE FLOAT', 'update': 'Feb 2026'},
             {'nama': 'BPJS Ketenagakerjaan', 'persen': 2.15, 'tipe': 'Institusi', 'catatan': 'Nambah', 'update': 'Feb 2026'},
             {'nama': 'Pemerintah Norwegia', 'persen': 1.08, 'tipe': 'Asing', 'catatan': 'Masuk Q1 2026', 'update': 'Feb 2026'}
         ],
@@ -80,9 +81,8 @@ SHAREHOLDER_DATA = {
     # ANTHONI SALIM
     'BBCA': {
         'pemegang': [
-            {'nama': 'Anthoni Salim', 'persen': 1.15, 'tipe': 'Founder', 'catatan': 'Pengendali', 'update': 'Feb 2026'},
+            # {'nama': 'Anthoni Salim', 'persen': 1.15, 'tipe': 'Pengendali', 'catatan': 'TIDAK MASUK FREE FLOAT', 'update': 'Feb 2026'},
             {'nama': 'BPJS Ketenagakerjaan', 'persen': 1.06, 'tipe': 'Institusi', 'catatan': 'Nambah', 'update': 'Feb 2026'},
-            {'nama': 'Pemerintah Norwegia', 'persen': 0.89, 'tipe': 'Asing', 'catatan': 'Masuk', 'update': 'Feb 2026'},
             {'nama': 'Vanguard', 'persen': 1.23, 'tipe': 'Asing', 'catatan': 'Nambah', 'update': 'Feb 2026'}
         ],
         'free_float': 95.67,
@@ -94,7 +94,7 @@ SHAREHOLDER_DATA = {
     },
     'INDF': {
         'pemegang': [
-            {'nama': 'Anthoni Salim', 'persen': 3.74, 'tipe': 'Founder', 'catatan': 'via Grup Salim', 'update': 'Feb 2026'},
+            # {'nama': 'Anthoni Salim', 'persen': 3.74, 'tipe': 'Pengendali', 'catatan': 'TIDAK MASUK FREE FLOAT', 'update': 'Feb 2026'},
             {'nama': 'BPJS Ketenagakerjaan', 'persen': 3.74, 'tipe': 'Institusi', 'catatan': 'Nambah', 'update': 'Feb 2026'}
         ],
         'free_float': 92.52,
@@ -103,7 +103,7 @@ SHAREHOLDER_DATA = {
     },
     'CBDK': {
         'pemegang': [
-            {'nama': 'Anthoni Salim', 'persen': 0.93, 'tipe': 'Founder', 'catatan': 'via Grup Salim - Jual', 'update': 'Feb 2026'}
+            # {'nama': 'Anthoni Salim', 'persen': 0.93, 'tipe': 'Pengendali', 'catatan': 'TIDAK MASUK FREE FLOAT', 'update': 'Feb 2026'}
         ],
         'free_float': 99.07,
         'total_shares': 1122334455,
@@ -115,7 +115,7 @@ SHAREHOLDER_DATA = {
     # LOW TUCK KWONG
     'BYAN': {
         'pemegang': [
-            {'nama': 'Low Tuck Kwong', 'persen': 40.22, 'tipe': 'Founder', 'catatan': 'Pengendali', 'update': 'Feb 2026'},
+            # {'nama': 'Low Tuck Kwong', 'persen': 40.22, 'tipe': 'Pengendali', 'catatan': 'TIDAK MASUK FREE FLOAT', 'update': 'Feb 2026'},
             {'nama': 'BPJS Ketenagakerjaan', 'persen': 1.33, 'tipe': 'Institusi', 'catatan': 'Nambah', 'update': 'Feb 2026'}
         ],
         'free_float': 58.45,
@@ -126,7 +126,7 @@ SHAREHOLDER_DATA = {
     # HARY TANOE
     'BHIT': {
         'pemegang': [
-            {'nama': 'Hary Tanoe', 'persen': 3.12, 'tipe': 'Founder', 'catatan': 'Pengendali', 'update': 'Feb 2026'}
+            # {'nama': 'Hary Tanoe', 'persen': 3.12, 'tipe': 'Pengendali', 'catatan': 'TIDAK MASUK FREE FLOAT', 'update': 'Feb 2026'}
         ],
         'free_float': 96.88,
         'total_shares': 5566778899,
@@ -136,7 +136,7 @@ SHAREHOLDER_DATA = {
     # DATO SRI TAHIR
     'MAYA': {
         'pemegang': [
-            {'nama': 'Dato Sri Tahir', 'persen': 19.34, 'tipe': 'Founder', 'catatan': 'Pengendali', 'update': 'Feb 2026'}
+            # {'nama': 'Dato Sri Tahir', 'persen': 19.34, 'tipe': 'Pengendali', 'catatan': 'TIDAK MASUK FREE FLOAT', 'update': 'Feb 2026'}
         ],
         'free_float': 80.66,
         'total_shares': 4455667788,
@@ -217,87 +217,44 @@ SHAREHOLDER_DATA = {
     }
 }
 
-def get_shareholder_info(stock_code):
-    """Mengembalikan info lengkap pemegang saham"""
-    return SHAREHOLDER_DATA.get(stock_code, {
-        'pemegang': [],
-        'free_float': 100.0,
-        'total_shares': 0,
-        'insider_activity': []
-    })
+# ========== FUNGSI UNTUK DATA FREE FLOAT ==========
 
-def analyze_goreng_potential(stock_code):
-    """Analisis potensi saham digoreng"""
+def get_free_float_holders(stock_code):
+    """
+    Mengembalikan data pemegang saham yang ADA DI FREE FLOAT aja
+    (pengendali/founder sudah dihapus dari dictionary)
+    """
     data = SHAREHOLDER_DATA.get(stock_code, {})
-    
-    if not data:
-        return {
-            'level': 'Tidak Ada Data',
-            'alasan': 'Data kepemilikan tidak tersedia',
-            'warna': 'gray'
-        }
-    
-    free_float = data.get('free_float', 100)
-    
-    # Hitung pemegang non-founder (>1%)
-    pemegang_lain = [p for p in data.get('pemegang', []) if p['tipe'] not in ['Founder']]
-    total_lain = sum([p['persen'] for p in pemegang_lain])
-    
-    # Insider activity 3 bulan terakhir
-    insider_beli = len([a for a in data.get('insider_activity', []) if a['aksi'] == 'BELI'])
-    insider_jual = len([a for a in data.get('insider_activity', []) if a['aksi'] == 'JUAL'])
-    
-    # Logic penentuan potensi
-    if free_float < 20:
-        level = '🔥 SANGAT TINGGI'
-        warna = 'red'
-        alasan = f'Free float hanya {free_float:.1f}% - saham dikuasai segelintir pihak'
-    elif free_float < 35:
-        level = '⚡ TINGGI'
-        warna = 'orange'
-        alasan = f'Free float {free_float:.1f}% - relatif mudah digerakkan'
-    elif free_float < 50:
-        level = '📊 SEDANG'
-        warna = 'yellow'
-        alasan = f'Free float {free_float:.1f}% - butuh modal lebih besar untuk goreng'
-    else:
-        level = '📉 RENDAH'
-        warna = 'green'
-        alasan = f'Free float {free_float:.1f}% - saham tersebar luas, sulit digoreng'
-    
-    # Tambah konteks
-    if insider_beli > insider_jual:
-        alasan += f' | Insider sedang akumulasi ({insider_beli}x beli)'
-    elif insider_jual > insider_beli:
-        alasan += f' | Insider sedang distribusi ({insider_jual}x jual)'
-    
-    return {
-        'level': level,
-        'alasan': alasan,
-        'warna': warna
-    }
+    return data.get('pemegang', [])
 
-def display_shareholder_info(stock_code):
-    """Tampilkan info pemegang saham dalam format bagus"""
+def get_free_float_value(stock_code):
+    """Mengembalikan nilai free float saham"""
     data = SHAREHOLDER_DATA.get(stock_code, {})
-    
-    if not data:
-        return "<p style='color: gray;'>Tidak ada data kepemilikan >1%</p>"
+    return data.get('free_float', 100.0)
+
+def get_insider_activity(stock_code):
+    """Mengembalikan aktivitas insider"""
+    data = SHAREHOLDER_DATA.get(stock_code, {})
+    return data.get('insider_activity', [])
+
+def display_free_float_info(stock_code, free_float_value):
+    """Tampilkan info pemegang saham yang ADA DI FREE FLOAT"""
+    free_float_holders = get_free_float_holders(stock_code)
     
     html = f"<div style='background-color: #1e1e1e; padding: 15px; border-radius: 10px; margin: 10px 0;'>"
-    html += f"<h4 style='color: #ffd700; margin: 0 0 10px 0;'>📋 Struktur Kepemilikan {stock_code}</h4>"
+    html += f"<h4 style='color: #ffd700; margin: 0 0 10px 0;'>📋 Pemegang di Free Float {stock_code}</h4>"
+    html += f"<p><span style='color: #aaa;'>Free Float:</span> <span style='color: #00ff88; font-weight: bold;'>{free_float_value:.2f}%</span></p>"
     
-    # Free float
-    html += f"<p><span style='color: #aaa;'>Free Float (saham beredar):</span> <span style='color: #00ff88; font-weight: bold;'>{data.get('free_float', 0):.2f}%</span></p>"
-    
-    # Pemegang >1%
-    if data.get('pemegang'):
-        html += "<p style='color: #aaa; margin: 10px 0 5px 0;'>Pemegang >1% (update Feb 2026):</p>"
-        total_pemegang = 0
-        for p in data['pemegang']:
-            total_pemegang += p['persen']
+    if free_float_holders:
+        html += "<p style='color: #aaa; margin: 10px 0 5px 0;'>Pemegang institusi/asing >1%:</p>"
+        total_dari_ff = 0
+        
+        for p in free_float_holders:
+            # Hitung persentase mereka DALAM free float
+            persen_dalam_ff = (p['persen'] / free_float_value) * 100
+            total_dari_ff += persen_dalam_ff
+            
             warna_tipe = {
-                'Founder': '#ffaa00',
                 'Institusi': '#1f77b4',
                 'Asing': '#00ff88'
             }.get(p['tipe'], '#ffffff')
@@ -305,33 +262,85 @@ def display_shareholder_info(stock_code):
             html += f"""
             <div style='display: flex; justify-content: space-between; background-color: #2d2d2d; padding: 8px; border-radius: 5px; margin: 5px 0;'>
                 <span><span style='color: {warna_tipe};'>■</span> {p['nama']}</span>
-                <span style='color: #ffd700; font-weight: bold;'>{p['persen']:.2f}%</span>
+                <span style='color: #ffd700; font-weight: bold;'>{persen_dalam_ff:.1f}%</span>
             </div>
             """
         
-        # Sisa free float
-        sisa_free_float = 100 - total_pemegang
+        # Sisa free float yang dipegang ritel
+        sisa_ritel = 100 - total_dari_ff
         html += f"""
         <div style='display: flex; justify-content: space-between; background-color: #2d2d2d; padding: 8px; border-radius: 5px; margin: 5px 0; border-left: 3px solid #00ff88;'>
-            <span><span style='color: #00ff88;'>■</span> Sisa Free Float (tersebar publik)</span>
-            <span style='color: #00ff88; font-weight: bold;'>{sisa_free_float:.2f}%</span>
+            <span><span style='color: #00ff88;'>■</span> Ritel</span>
+            <span style='color: #00ff88; font-weight: bold;'>{sisa_ritel:.1f}%</span>
+        </div>
+        """
+    else:
+        html += "<p style='color: #aaa;'>Tidak ada institusi/asing >1%</p>"
+        html += f"""
+        <div style='display: flex; justify-content: space-between; background-color: #2d2d2d; padding: 8px; border-radius: 5px; margin: 5px 0; border-left: 3px solid #00ff88;'>
+            <span><span style='color: #00ff88;'>■</span> Ritel</span>
+            <span style='color: #00ff88; font-weight: bold;'>100%</span>
         </div>
         """
     
     # Insider activity
-    if data.get('insider_activity'):
-        html += "<p style='color: #aaa; margin: 15px 0 5px 0;'>Aktivitas Insider 30 hari terakhir:</p>"
-        for a in data['insider_activity']:
+    insider = get_insider_activity(stock_code)
+    if insider:
+        html += "<p style='color: #aaa; margin: 15px 0 5px 0;'>Aktivitas Insider 30 hari:</p>"
+        for a in insider:
             warna_aksi = '#00ff88' if a['aksi'] == 'BELI' else '#ff5555'
             html += f"""
             <div style='display: flex; justify-content: space-between; background-color: #2d2d2d; padding: 8px; border-radius: 5px; margin: 5px 0;'>
-                <span>{a['tanggal']} - {a['insider']}</span>
-                <span style='color: {warna_aksi}; font-weight: bold;'>{a['aksi']} {a['jumlah']:,} @ {a['harga']}</span>
+                <span>{a['tanggal']}</span>
+                <span style='color: {warna_aksi}; font-weight: bold;'>{a['aksi']} {a['jumlah']:,}</span>
             </div>
             """
     
     html += "</div>"
     return html
+
+# ========== SINGKATAN KATEGORI ==========
+
+def get_kategori_singkatan(kategori):
+    """Mengubah kategori panjang jadi singkatan"""
+    singkatan = {
+        'Ultra Low Float': 'ULF',
+        'Very Low Float': 'VLF',
+        'Low Float': 'LF',
+        'Moderate Low Float': 'MLF',
+        'Normal Float': 'NF'
+    }
+    return singkatan.get(kategori, kategori)
+
+def get_potensi_singkatan(potensi):
+    """Mengubah potensi goreng jadi singkatan"""
+    if 'ULTRA TINGGI' in potensi:
+        return '🔥 UT'
+    elif 'SANGAT TINGGI' in potensi:
+        return '🔥 ST'
+    elif 'TINGGI' in potensi:
+        return '⚡ TG'
+    elif 'SEDANG' in potensi:
+        return '📊 SD'
+    elif 'RENDAH' in potensi:
+        return '📉 RD'
+    else:
+        return potensi
+
+def analyze_goreng_potential(free_float):
+    """
+    Analisis potensi saham digoreng berdasarkan free float
+    """
+    if free_float < 10:
+        return '🔥 UT'  # Ultra Tinggi
+    elif free_float < 15:
+        return '🔥 ST'  # Sangat Tinggi
+    elif free_float < 25:
+        return '⚡ TG'  # Tinggi
+    elif free_float < 40:
+        return '📊 SD'  # Sedang
+    else:
+        return '📉 RD'  # Rendah
 
 # Config halaman
 st.set_page_config(
@@ -403,7 +412,7 @@ st.markdown("""
 
 # Title
 st.markdown('<p class="main-header">📊 Screener Saham Indonesia</p>', unsafe_allow_html=True)
-st.markdown('<p class="info-text">Scanner untuk Open=Low Pattern & Low Float Stocks dengan Analisis AI + Bandar Detector</p>', unsafe_allow_html=True)
+st.markdown('<p class="info-text">Scanner Open=Low & Low Float dengan Data Free Float + Bandar Detector</p>', unsafe_allow_html=True)
 
 # Sidebar
 with st.sidebar:
@@ -436,10 +445,9 @@ with st.sidebar:
     st.markdown("### 📌 Info")
     st.markdown("""
     - **Data:** Yahoo Finance + KSEI
-    - **Total Saham:** 900+
-    - **Update:** Real-time
-    - **Pemegang >1%:** Update Feb 2026
-    - **Tujuan:** Edukasi
+    - **Free Float:** % saham beredar
+    - **Pemegang:** Hanya di free float
+    - **Update:** Feb 2026
     """)
     
     st.markdown("---")
@@ -656,21 +664,21 @@ if "Open = Low" in scan_mode:
                     st.markdown("**📋 Kesimpulan AI:**")
                     st.markdown(analysis)
                     
-                    # Tambah info pemegang saham
-                    st.markdown("**📋 Struktur Kepemilikan:**")
-                    st.markdown(display_shareholder_info(row['saham']), unsafe_allow_html=True)
+                    # Tambah info pemegang free float
+                    free_float = get_free_float_value(row['saham'])
+                    st.markdown(display_free_float_info(row['saham'], free_float), unsafe_allow_html=True)
                     
                     st.markdown("---")
             
             # ========== WATCHLIST GENERATOR ==========
             st.markdown("## 📋 Watchlist Generator")
-            st.markdown("Top saham untuk dipantau besok (fokus pada yang sering Open=Low dengan gain tertinggi):")
+            st.markdown("Top saham untuk dipantau besok:")
             
             col1, col2 = st.columns(2)
             with col1:
                 min_gain_filter = st.slider("🎯 Minimal gain rata-rata (%)", 3, 10, 5, key="min_gain")
             with col2:
-                top_n = st.number_input("📊 Jumlah saham dalam watchlist", 5, 30, 15, key="top_n")
+                top_n = st.number_input("📊 Jumlah saham", 5, 30, 15, key="top_n")
             
             # Filter berdasarkan gain minimal
             df_watchlist = df_results[df_results['rata_rata_kenaikan'] >= min_gain_filter].copy()
@@ -695,7 +703,7 @@ if "Open = Low" in scan_mode:
                     <div class="watchlist-header">
                         <h2 style="color: white; margin: 0;">📋 WATCHLIST TRADING</h2>
                         <p style="color: #a8d8ff; font-size: 1.2rem;">{datetime.now().strftime('%d %B %Y')}</p>
-                        <p style="color: #ffaa00;">Pantau 15 menit pertama! Open=Low = Siap eksekusi 🎯</p>
+                        <p style="color: #ffaa00;">Pantau 15 menit pertama! 🎯</p>
                     </div>
                     """,
                     unsafe_allow_html=True
@@ -705,24 +713,23 @@ if "Open = Low" in scan_mode:
                 watchlist_data = []
                 for i, (idx, row) in enumerate(df_watchlist.iterrows()):
                     if row['probabilitas'] >= 20 and row['rata_rata_kenaikan'] >= 7:
-                        rekom = "🔥 PRIORITAS UTAMA"
+                        rekom = "🔥 PRIORITAS"
                     elif row['probabilitas'] >= 15 and row['rata_rata_kenaikan'] >= 5:
-                        rekom = "⚡ LAYAK DICOBA"
+                        rekom = "⚡ LAYAK"
                     else:
                         rekom = "📌 PANTAU"
                     
-                    # Tambah info potensi goreng
-                    goreng = analyze_goreng_potential(row['saham'])
+                    free_float = get_free_float_value(row['saham'])
+                    potensi = analyze_goreng_potential(free_float)
                     
                     watchlist_data.append({
                         "Rank": i + 1,
                         "Saham": row['saham'],
-                        "Probabilitas": f"{row['probabilitas']:.1f}%",
-                        "Gain Rata": f"{row['rata_rata_kenaikan']:.1f}%",
-                        "Max Gain": f"{row['max_kenaikan']:.1f}%",
-                        "Frekuensi": f"{row['frekuensi']}x",
-                        "Rekomendasi": rekom,
-                        "Potensi Goreng": goreng['level']
+                        "Prob": f"{row['probabilitas']:.0f}%",
+                        "Gain": f"{row['rata_rata_kenaikan']:.0f}%",
+                        "FF": f"{free_float:.0f}%",
+                        "Pot": potensi,
+                        "Rekom": rekom
                     })
                 
                 # Tampilkan dataframe
@@ -734,14 +741,14 @@ if "Open = Low" in scan_mode:
                     height=400
                 )
                 
-                # Export buttons watchlist
-                st.markdown("### 📥 Export Watchlist")
+                # Export buttons
+                st.markdown("### 📥 Export")
                 col_w1, col_w2 = st.columns(2)
                 
                 with col_w1:
                     csv_data = watchlist_df.to_csv(index=False).encode('utf-8')
                     st.download_button(
-                        label="📊 Download CSV",
+                        label="📊 CSV",
                         data=csv_data,
                         file_name=f"watchlist_{datetime.now().strftime('%Y%m%d')}.csv",
                         mime="text/csv",
@@ -752,36 +759,27 @@ if "Open = Low" in scan_mode:
                     excel_data = export_to_excel(watchlist_df)
                     if excel_data:
                         st.download_button(
-                            label="📈 Download Excel",
+                            label="📈 Excel",
                             data=excel_data,
                             file_name=f"watchlist_{datetime.now().strftime('%Y%m%d')}.xlsx",
                             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                             use_container_width=True
                         )
                     else:
-                        st.error("❌ Gagal bikin Excel")
+                        st.error("❌ Gagal")
                 
-                # Tips
-                st.info("""
-                💡 **Tips Penggunaan Watchlist:**
-                1. Simpan watchlist ini di HP/laptop lo
-                2. Besok pagi jam 8:45, buka watchlist
-                3. Pantau 15 menit pertama (9:00-9:15)
-                4. Begitu ada saham Open=Low, langsung eksekusi
-                5. Fokus ke yang bertuliskan 🔥 PRIORITAS UTAMA
-                """)
+                st.info("💡 Fokus ke 🔥 PRIORITAS dengan potensi 🔥 UT/ST")
             else:
-                st.warning(f"Tidak ada saham dengan gain minimal {min_gain_filter}%. Coba turunkan filternya.")
+                st.warning(f"Tidak ada saham")
             
-            # ========== EXPORT DATA SCANNING ==========
-            st.markdown("### 📥 Export Data Scanning")
-            
+            # Export data scanning
+            st.markdown("### 📥 Export Data")
             col_scan1, col_scan2 = st.columns(2)
             
             with col_scan1:
                 csv_data_scan = display_df.to_csv(index=False).encode('utf-8')
                 st.download_button(
-                    label="📊 Download CSV",
+                    label="📊 CSV",
                     data=csv_data_scan,
                     file_name=f"scan_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
                     mime="text/csv",
@@ -792,67 +790,54 @@ if "Open = Low" in scan_mode:
                 excel_data_scan = export_to_excel(display_df)
                 if excel_data_scan:
                     st.download_button(
-                        label="📈 Download Excel",
+                        label="📈 Excel",
                         data=excel_data_scan,
                         file_name=f"scan_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                         use_container_width=True
                     )
                 else:
-                    st.error("❌ Gagal bikin Excel. Coba pake CSV aja.")
+                    st.error("❌ Gagal")
                     
         else:
             st.markdown(
                 """
-                <div style="background: linear-gradient(135deg, #f093fb, #f5576c); padding: 20px; border-radius: 15px; text-align: center; color: white; border-left: 8px solid #ffd700;">
-                    ⚠️ Tidak ditemukan saham dengan kriteria yang sesuai.<br>
-                    Coba turunkan minimal kenaikan atau perpanjang periode analisis.
+                <div style="background: linear-gradient(135deg, #f093fb, #f5576c); padding: 20px; border-radius: 15px; text-align: center; color: white;">
+                    ⚠️ Tidak ditemukan saham
                 </div>
                 """,
                 unsafe_allow_html=True
             )
 
 elif "Low Float" in scan_mode:
-    st.markdown('<p class="sub-header">🔍 Scanner Low Float + Bandar Detector</p>', unsafe_allow_html=True)
+    st.markdown('<p class="sub-header">🔍 Scanner Low Float + Free Float</p>', unsafe_allow_html=True)
     
     col1, col2 = st.columns(2)
     
     with col1:
-        max_public_float = st.slider(
-            "📊 Maksimal Public Float (%)", 
-            1, 50, 20,
-            help="Saham dengan public float di bawah nilai ini (free float)"
-        )
+        max_ff = st.slider("📊 Maks Free Float (%)", 1, 50, 20, help="Free float di bawah nilai ini")
     
     with col2:
-        min_volume = st.number_input(
-            "📈 Minimal Volume", 
-            min_value=0, 
-            value=0, 
-            step=100000,
-            help="Minimal volume rata-rata (0 = abaikan)"
-        )
+        min_vol = st.number_input("📈 Min Volume", min_value=0, value=0, step=100000)
     
-    # Opsi mode scanning
     scan_option = st.radio(
-        "🔍 Mode Scanning:",
-        ["⚡ Cepat (50 saham)", "🐢 Lengkap (Semua saham)"],
+        "Mode:",
+        ["⚡ Cepat", "🐢 Lengkap"],
         horizontal=True,
         index=0
     )
     
-    if st.button("🚀 SCAN LOW FLOAT", type="primary", use_container_width=True):
+    if st.button("🚀 SCAN", type="primary", use_container_width=True):
         if selected_stocks:
             stocks_to_scan = selected_stocks
         else:
-            if scan_option == "⚡ Cepat (50 saham)":
+            if scan_option == "⚡ Cepat":
                 stocks_to_scan = STOCKS_LIST[:50]
             else:
                 stocks_to_scan = STOCKS_LIST
         
-        with st.spinner(f"Mengumpulkan data {len(stocks_to_scan)} saham..."):
-            # Panggil scanner low float
-            results = scan_low_float(stocks_to_scan, max_public_float, min_volume)
+        with st.spinner(f"Scan {len(stocks_to_scan)} saham..."):
+            results = scan_low_float(stocks_to_scan, max_ff, min_vol)
             
             if results:
                 df_results = pd.DataFrame(results)
@@ -860,39 +845,39 @@ elif "Low Float" in scan_mode:
                 st.markdown(
                     f"""
                     <div style="background: linear-gradient(135deg, #11998e, #38ef7d); padding: 25px; border-radius: 15px; margin: 20px 0; text-align: center; color: white; border: 2px solid #ffd700;">
-                        <h2 style="color: #ffd700; margin: 0;">✅ SCAN LOW FLOAT BERHASIL</h2>
+                        <h2 style="color: #ffd700; margin: 0;">✅ BERHASIL</h2>
                         <p style="font-size: 2rem; margin: 10px 0;">{len(df_results)} SAHAM</p>
-                        <p>Ditemukan saham dengan public float di bawah {max_public_float}%</p>
+                        <p>Free float < {max_ff}%</p>
                     </div>
                     """,
                     unsafe_allow_html=True
                 )
                 
-                # Tampilkan hasil dengan info pemegang saham
-                st.markdown("### 📋 Hasil Scanning + Data Pemegang Saham")
+                st.markdown("### 📋 Hasil + Free Float")
                 
-                # Ambil data pemegang saham untuk setiap hasil
+                # Ambil data free float
                 enriched_results = []
                 for _, row in df_results.iterrows():
                     saham = row['saham']
-                    shareholder_info = get_shareholder_info(saham)
-                    goreng = analyze_goreng_potential(saham)
+                    free_float = get_free_float_value(saham)
+                    kategori = row['category']
+                    kategori_singkat = get_kategori_singkatan(kategori)
+                    potensi = analyze_goreng_potential(free_float)
                     
-                    # Hitung total kepemilikan >1%
-                    total_pemegang_utama = sum([p['persen'] for p in shareholder_info.get('pemegang', [])])
-                    free_float_asli = shareholder_info.get('free_float', 100)
-                    sisa_free_float = 100 - total_pemegang_utama if total_pemegang_utama > 0 else 100
+                    # Hitung komposisi free float
+                    holders = get_free_float_holders(saham)
+                    total_inst_asing = sum([(p['persen'] / free_float) * 100 for p in holders])
+                    sisa_ritel = 100 - total_inst_asing
                     
                     enriched_results.append({
                         'Saham': saham,
-                        'Free Float (%)': f"{free_float_asli:.2f}%",
-                        'Kategori': row['category'],
-                        'Volume': f"{row['volume_avg']:,.0f}",
-                        'Volatilitas (%)': f"{row['volatility']:.2f}%",
-                        'Score': f"{row['low_float_score']:.1f}",
-                        'Pemegang >1%': f"{total_pemegang_utama:.2f}%" if total_pemegang_utama > 0 else "Tidak ada",
-                        'Sisa Free Float': f"{sisa_free_float:.2f}%" if total_pemegang_utama > 0 else "100%",
-                        'Potensi Goreng': goreng['level']
+                        'FF': f"{free_float:.1f}%",
+                        'Kat': kategori_singkat,
+                        'Vol': f"{row['volume_avg']/1e6:.1f}M",
+                        'Volat': f"{row['volatility']:.0f}%",
+                        'Inst': f"{total_inst_asing:.0f}%",
+                        'Ritel': f"{sisa_ritel:.0f}%",
+                        'Pot': potensi
                     })
                 
                 enriched_df = pd.DataFrame(enriched_results)
@@ -903,36 +888,22 @@ elif "Low Float" in scan_mode:
                     hide_index=True
                 )
                 
-                # Tampilkan detail untuk setiap saham
-                st.markdown("### 🔍 Detail Pemegang Saham")
-                
+                # Detail
+                st.markdown("### 🔍 Detail Free Float")
                 for _, row in df_results.head(5).iterrows():
-                    with st.expander(f"📊 {row['saham']} - Free Float: {row['public_float']:.2f}%"):
-                        # Tampilkan info pemegang saham
-                        st.markdown(display_shareholder_info(row['saham']), unsafe_allow_html=True)
-                        
-                        # Analisis potensi goreng
-                        goreng = analyze_goreng_potential(row['saham'])
-                        st.markdown(f"""
-                        <div style="background-color: #1e1e1e; padding: 15px; border-radius: 10px; margin: 10px 0;">
-                            <h4 style="color: #ffd700; margin: 0 0 10px 0;">🔥 Analisis Potensi Goreng</h4>
-                            <p style="color: {'red' if 'TINGGI' in goreng['level'] else 'orange' if 'SEDANG' in goreng['level'] else 'green'}; font-weight: bold; font-size: 1.2rem;">
-                                {goreng['level']}
-                            </p>
-                            <p style="color: #aaa;">{goreng['alasan']}</p>
-                        </div>
-                        """, unsafe_allow_html=True)
+                    free_float = get_free_float_value(row['saham'])
+                    with st.expander(f"📊 {row['saham']} - FF: {free_float:.1f}%"):
+                        st.markdown(display_free_float_info(row['saham'], free_float), unsafe_allow_html=True)
                 
                 # Visualisasi
-                st.markdown("### 📊 Distribusi Kategori Low Float")
+                st.markdown("### 📊 Distribusi")
                 col1, col2 = st.columns(2)
                 
                 with col1:
-                    category_counts = df_results['category'].value_counts()
                     fig = px.pie(
-                        values=category_counts.values,
-                        names=category_counts.index,
-                        title="Distribusi Kategori Low Float"
+                        values=df_results['category'].value_counts().values,
+                        names=df_results['category'].value_counts().index,
+                        title="Kategori Free Float"
                     )
                     st.plotly_chart(fig, use_container_width=True)
                 
@@ -943,19 +914,18 @@ elif "Low Float" in scan_mode:
                         y='volatility',
                         size='volume_avg',
                         hover_data=['saham'],
-                        color='category',
-                        title="Public Float vs Volatilitas"
+                        title="FF vs Volatilitas"
                     )
                     st.plotly_chart(fig, use_container_width=True)
                 
                 # Export
-                st.markdown("### 📥 Export Data")
+                st.markdown("### 📥 Export")
                 col_exp1, col_exp2 = st.columns(2)
                 
                 with col_exp1:
                     csv_data = enriched_df.to_csv(index=False).encode('utf-8')
                     st.download_button(
-                        label="📊 Download CSV",
+                        label="📊 CSV",
                         data=csv_data,
                         file_name=f"low_float_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
                         mime="text/csv",
@@ -966,20 +936,19 @@ elif "Low Float" in scan_mode:
                     excel_data = export_to_excel(enriched_df)
                     if excel_data:
                         st.download_button(
-                            label="📈 Download Excel",
+                            label="📈 Excel",
                             data=excel_data,
                             file_name=f"low_float_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
                             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                             use_container_width=True
                         )
                     else:
-                        st.error("❌ Gagal bikin Excel")
+                        st.error("❌ Gagal")
             else:
                 st.markdown(
                     """
                     <div style="background: linear-gradient(135deg, #f093fb, #f5576c); padding: 20px; border-radius: 15px; text-align: center; color: white;">
-                        ⚠️ Tidak ditemukan saham low float dengan kriteria tersebut.<br>
-                        Coba naikkan maksimal public float atau turunkan minimal volume.
+                        ⚠️ Tidak ditemukan
                     </div>
                     """,
                     unsafe_allow_html=True
@@ -990,9 +959,9 @@ st.markdown("---")
 st.markdown(
     """
     <div style='text-align: center; color: #666; font-size: 0.9rem;'>
-        <p>⚠️ <strong>Disclaimer:</strong> Data untuk tujuan edukasi, bukan rekomendasi investasi.</p>
-        <p>Data kepemilikan >1% berdasarkan laporan KSEI per 27 Februari 2026</p>
-        <p>📊 Data dari Yahoo Finance + KSEI | ⏱️ Update: Real-time | 🔥 Bandar Detector Aktif</p>
+        <p>⚠️ Data edukasi, bukan rekomendasi</p>
+        <p>Free Float: % saham beredar | Pemegang: Hanya di free float</p>
+        <p>🔥 UT=UltraTinggi 🔥 ST=SangatTinggi ⚡ TG=Tinggi 📊 SD=Sedang 📉 RD=Rendah</p>
     </div>
     """,
     unsafe_allow_html=True
