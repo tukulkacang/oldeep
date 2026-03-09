@@ -1,209 +1,187 @@
-import pandas as pd
 import numpy as np
-from io import BytesIO
-from datetime import datetime
-import openpyxl
-from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-from fpdf import FPDF
-import tempfile
-import os
+import pandas as pd
+from datetime import datetime, timedelta
+from .data_fetcher import get_stock_data, get_news_sentiment
 
-class ExcelExporter:
-    """Class untuk export ke Excel"""
-    
-    @staticmethod
-    def export_to_excel(dataframe, sheet_name="Hasil Scanning"):
-        """Export DataFrame ke Excel dengan formatting"""
-        output = BytesIO()
-        
-        with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            dataframe.to_excel(writer, sheet_name=sheet_name, index=False)
-            
-            # Get workbook and worksheet
-            workbook = writer.book
-            worksheet = writer.sheets[sheet_name]
-            
-            # Styling
-            header_font = Font(bold=True, color="FFFFFF")
-            header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
-            center_alignment = Alignment(horizontal="center", vertical="center")
-            
-            # Apply header styling
-            for col in range(1, len(dataframe.columns) + 1):
-                cell = worksheet.cell(row=1, column=col)
-                cell.font = header_font
-                cell.fill = header_fill
-                cell.alignment = center_alignment
-            
-            # Auto-adjust column widths
-            for col in worksheet.columns:
-                max_length = 0
-                column = col[0].column_letter
-                for cell in col:
-                    try:
-                        if len(str(cell.value)) > max_length:
-                            max_length = len(str(cell.value))
-                    except:
-                        pass
-                adjusted_width = min(max_length + 2, 50)
-                worksheet.column_dimensions[column].width = adjusted_width
-            
-            # Add border to all cells
-            thin_border = Border(
-                left=Side(style='thin'),
-                right=Side(style='thin'),
-                top=Side(style='thin'),
-                bottom=Side(style='thin')
-            )
-            
-            for row in worksheet.iter_rows(min_row=1, max_row=len(dataframe) + 1, min_col=1, max_col=len(dataframe.columns)):
-                for cell in row:
-                    cell.border = thin_border
-        
-        output.seek(0)
-        return output.getvalue()
-    
-    @staticmethod
-    def export_multiple_sheets(dataframes_dict):
-        """Export multiple DataFrames ke different sheets"""
-        output = BytesIO()
-        
-        with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            for sheet_name, df in dataframes_dict.items():
-                df.to_excel(writer, sheet_name=sheet_name[:31], index=False)  # Sheet name max 31 chars
-        
-        output.seek(0)
-        return output.getvalue()
-
-class PDFExporter(FPDF):
-    """Class untuk export ke PDF"""
+class StockAnalyzer:
+    """Class untuk analisis AI sederhana"""
     
     def __init__(self):
-        super().__init__()
-        self.set_auto_page_break(auto=True, margin=15)
+        self.patterns = {}
+        self.insights = {}
     
-    def header(self):
-        """Header setiap halaman"""
-        self.set_font('Arial', 'B', 12)
-        self.cell(0, 10, 'Hasil Scanning Saham Indonesia', 0, 1, 'C')
-        self.set_font('Arial', 'I', 8)
-        self.cell(0, 5, f'Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}', 0, 1, 'C')
-        self.ln(5)
+    def analyze_pattern(self, stock_data):
+        """
+        Analisis pattern untuk satu saham
+        
+        Parameters:
+        - stock_data: dictionary hasil dari open_low_scanner
+        
+        Returns:
+        - String analisis
+        """
+        if not stock_data:
+            return "Data tidak cukup untuk analisis"
+        
+        saham = stock_data['saham']
+        prob = stock_data['probabilitas']
+        avg_gain = stock_data['rata_rata_kenaikan']
+        last_gain = stock_data['last_kenaikan']
+        freq = stock_data['frekuensi']
+        
+        analysis = []
+        
+        # Analisis probabilitas
+        if prob >= 20:
+            analysis.append(f"📊 **Probabilitas Tinggi ({prob:.1f}%)** - Saham ini sering menunjukkan pattern Open=Low dalam {stock_data['total_hari_dianalisis']} hari terakhir.")
+        elif prob >= 10:
+            analysis.append(f"📊 **Probabilitas Sedang ({prob:.1f}%)** - Cukup sering muncul pattern Open=Low.")
+        else:
+            analysis.append(f"📊 **Probabilitas Rendah ({prob:.1f}%)** - Pattern Open=Low jarang terjadi.")
+        
+        # Analisis kenaikan
+        if avg_gain >= 10:
+            analysis.append(f"💰 **Kenaikan Rata-rata Tinggi ({avg_gain:.1f}%)** - Potensi gain besar saat pattern terjadi.")
+        elif avg_gain >= 7:
+            analysis.append(f"💰 **Kenaikan Rata-rata Sedang ({avg_gain:.1f}%)** - Potensi gain cukup baik.")
+        else:
+            analysis.append(f"💰 **Kenaikan Rata-rata ({avg_gain:.1f}%)** - Gain moderat.")
+        
+        # Konsistensi pattern
+        if freq >= 10:
+            analysis.append(f"🎯 **Sangat Konsisten** - Telah terjadi {freq} kali dalam periode analisis.")
+        elif freq >= 5:
+            analysis.append(f"🎯 **Cukup Konsisten** - Terjadi {freq} kali.")
+        else:
+            analysis.append(f"🎯 **Masih Jarang** - Baru {freq} kali terjadi.")
+        
+        # Trend terakhir
+        if stock_data['recent_trend']:
+            analysis.append(f"📈 **Trend Terkini:** {stock_data['recent_trend']}")
+        
+        # Pattern terakhir
+        if stock_data['last_pattern_date']:
+            analysis.append(f"⏰ **Pattern Terakhir:** {stock_data['last_pattern_date']} dengan kenaikan {stock_data['last_kenaikan']:.1f}%")
+        
+        # Rekomendasi
+        if prob > 15 and avg_gain > 5:
+            analysis.append("\n✅ **REKOMENDASI:** Menarik untuk diperhatikan. Pattern cukup sering terjadi dengan gain yang baik.")
+        elif prob > 10:
+            analysis.append("\n⚠️ **REKOMENDASI:** Bisa dicoba dengan risk management ketat.")
+        else:
+            analysis.append("\n📌 **REKOMENDASI:** Observasi dulu, pattern belum konsisten.")
+        
+        return "\n".join(analysis)
     
-    def footer(self):
-        """Footer setiap halaman"""
-        self.set_y(-15)
-        self.set_font('Arial', 'I', 8)
-        self.cell(0, 10, f'Halaman {self.page_no()}', 0, 0, 'C')
+    def analyze_low_float(self, stock_data):
+        """
+        Analisis untuk saham low float
+        """
+        if not stock_data:
+            return "Data tidak cukup"
+        
+        saham = stock_data['saham']
+        public_float = stock_data['public_float']
+        category = stock_data['category']
+        volatility = stock_data['volatility']
+        volume = stock_data['volume_avg']
+        
+        analysis = []
+        
+        # Analisis kategori
+        if public_float < 5:
+            analysis.append(f"🔥 **Ultra Low Float ({public_float:.1f}%)** - Sangat langka, potensi pergerakan ekstrem!")
+        elif public_float < 10:
+            analysis.append(f"⚡ **Very Low Float ({public_float:.1f}%)** - Pergerakan bisa sangat volatil.")
+        elif public_float < 15:
+            analysis.append(f"📊 **Low Float ({public_float:.1f}%)** - Cukup likuid dengan potensi pergerakan besar.")
+        else:
+            analysis.append(f"📈 **Normal Float ({public_float:.1f}%)** - Lebih stabil, pergerakan lebih moderat.")
+        
+        # Analisis volatilitas
+        if volatility > 50:
+            analysis.append(f"🌋 **Volatilitas Sangat Tinggi ({volatility:.1f}%)** - Siap untuk pergerakan besar!")
+        elif volatility > 30:
+            analysis.append(f"⚡ **Volatilitas Tinggi ({volatility:.1f}%)** - Cocok untuk trader aktif.")
+        else:
+            analysis.append(f"💧 **Volatilitas Normal ({volatility:.1f}%)** - Pergerakan relatif stabil.")
+        
+        # Analisis volume
+        avg_vol_text = f"{volume:,.0f}" if volume > 0 else "N/A"
+        if volume > 10000000:
+            analysis.append(f"📊 **Volume Tinggi ({avg_vol_text})** - Likuiditas sangat baik.")
+        elif volume > 1000000:
+            analysis.append(f"📊 **Volume Sedang ({avg_vol_text})** - Cukup likuid.")
+        else:
+            analysis.append(f"📊 **Volume Rendah ({avg_vol_text})** - Waspada likuiditas.")
+        
+        # Skor low float
+        analysis.append(f"🎯 **Low Float Score:** {stock_data['low_float_score']:.1f}/100")
+        
+        return "\n".join(analysis)
     
-    def add_title(self, title):
-        """Menambahkan judul section"""
-        self.set_font('Arial', 'B', 11)
-        self.set_fill_color(200, 220, 255)
-        self.cell(0, 8, title, 0, 1, 'L', 1)
-        self.ln(2)
+    def predict_next_pattern(self, stock_code, historical_data):
+        """
+        Prediksi sederhana kapan pattern akan muncul lagi
+        """
+        if historical_data is None or len(historical_data) < 50:
+            return "Data historis tidak cukup untuk prediksi"
+        
+        # Analisis sederhana berdasarkan jarak antar pattern
+        pattern_dates = []
+        for i in range(1, len(historical_data)):
+            if abs(historical_data['Open'].iloc[i] - historical_data['Low'].iloc[i]) / historical_data['Low'].iloc[i] <= 0.005:
+                pattern_dates.append(historical_data.index[i])
+        
+        if len(pattern_dates) < 3:
+            return "Belum cukup data pattern untuk prediksi"
+        
+        # Hitung rata-rata jarak antar pattern
+        intervals = []
+        for i in range(1, len(pattern_dates)):
+            interval = (pattern_dates[i] - pattern_dates[i-1]).days
+            intervals.append(interval)
+        
+        avg_interval = np.mean(intervals)
+        last_pattern = pattern_dates[-1]
+        days_since_last = (datetime.now() - last_pattern).days
+        
+        if days_since_last >= avg_interval:
+            return f"🔮 **Potensi pattern dalam waktu dekat** (rata-rata interval {avg_interval:.0f} hari, sudah {days_since_last} hari sejak pattern terakhir)"
+        else:
+            remaining = avg_interval - days_since_last
+            return f"📅 **Rata-rata pattern setiap {avg_interval:.0f} hari** (terakhir {days_since_last} hari lalu, prediksi {remaining:.0f} hari lagi)"
     
-    def add_summary(self, summary_dict):
-        """Menambahkan ringkasan"""
-        self.set_font('Arial', '', 10)
-        for key, value in summary_dict.items():
-            self.cell(50, 6, f"{key}:", 0, 0)
-            self.cell(0, 6, str(value), 0, 1)
-        self.ln(5)
-    
-    def add_table(self, dataframe, max_rows=20):
-        """Menambahkan tabel dari DataFrame"""
-        if dataframe.empty:
-            self.cell(0, 6, "Tidak ada data", 0, 1)
-            return
+    def get_market_context(self, stock_code):
+        """
+        Mendapatkan konteks pasar untuk saham
+        """
+        sentiment = get_news_sentiment(stock_code)
         
-        # Limit rows untuk PDF
-        df_display = dataframe.head(max_rows)
+        context = []
         
-        # Column widths (adjust based on content)
-        col_widths = []
-        for col in df_display.columns:
-            max_len = max(
-                df_display[col].astype(str).str.len().max(),
-                len(str(col))
-            )
-            width = min(max_len * 2, 40)  # Max 40mm
-            col_widths.append(width)
+        # Sentimen berita
+        if sentiment['sentiment'] == 'positive':
+            context.append(f"📰 **Sentimen Positif** (skor: {sentiment['score']})")
+        elif sentiment['sentiment'] == 'negative':
+            context.append(f"⚠️ **Sentimen Negatif** (skor: {sentiment['score']})")
+        else:
+            context.append("📰 **Sentimen Netral**")
         
-        # Table header
-        self.set_font('Arial', 'B', 9)
-        self.set_fill_color(200, 200, 200)
-        for i, col in enumerate(df_display.columns):
-            self.cell(col_widths[i], 7, str(col), 1, 0, 'C', 1)
-        self.ln()
-        
-        # Table data
-        self.set_font('Arial', '', 8)
-        fill = False
-        for _, row in df_display.iterrows():
-            for i, value in enumerate(row):
-                # Format numbers
-                if isinstance(value, float):
-                    text = f"{value:.2f}"
-                else:
-                    text = str(value)
-                
-                self.cell(col_widths[i], 6, text[:15], 1, 0, 'L', fill)
-            self.ln()
-            fill = not fill
-        
-        if len(dataframe) > max_rows:
-            self.cell(0, 6, f"... dan {len(dataframe) - max_rows} data lainnya", 0, 1)
-        
-        self.ln(5)
+        return "\n".join(context)
 
-def export_to_excel(dataframe, sheet_name="Hasil Scanning"):
-    """Wrapper function untuk export Excel"""
-    exporter = ExcelExporter()
-    return exporter.export_to_excel(dataframe, sheet_name)
+# Singleton instance
+analyzer = StockAnalyzer()
 
-def export_to_pdf(dataframe, title="Hasil Scanning", summary=None):
-    """Wrapper function untuk export PDF"""
-    pdf = PDFExporter()
-    pdf.add_page()
-    
-    # Add title
-    pdf.add_title(title)
-    
-    # Add summary if provided
-    if summary:
-        pdf.add_summary(summary)
-    
-    # Add table
-    pdf.add_table(dataframe)
-    
-    # Output to BytesIO
-    output = BytesIO()
-    pdf.output(output, 'F')  # Write to BytesIO
-    
-    # Baca file yang ditulis
-    with open(output.name, 'rb') as f:
-        pdf_data = f.read()
-    
-    # Clean up temp file
-    os.unlink(output.name)
-    
-    return pdf_data
+# Fungsi helper
+def analyze_pattern(stock_data):
+    return analyzer.analyze_pattern(stock_data)
 
-def export_to_csv(dataframe):
-    """Export ke CSV"""
-    output = BytesIO()
-    dataframe.to_csv(output, index=False)
-    output.seek(0)
-    return output.getvalue()
+def analyze_low_float(stock_data):
+    return analyzer.analyze_low_float(stock_data)
 
-def format_number(num):
-    """Format angka untuk display"""
-    if num >= 1e9:
-        return f"{num/1e9:.2f} B"
-    elif num >= 1e6:
-        return f"{num/1e6:.2f} M"
-    elif num >= 1e3:
-        return f"{num/1e3:.2f} K"
-    else:
-        return str(num)
+def predict_next_pattern(stock_code, historical_data):
+    return analyzer.predict_next_pattern(stock_code, historical_data)
+
+def get_market_context(stock_code):
+    return analyzer.get_market_context(stock_code)
