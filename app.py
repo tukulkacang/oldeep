@@ -58,33 +58,6 @@ st.markdown("""
         border-left: 4px solid #ffc107;
         border-radius: 0.25rem;
     }
-    .ai-card-high {
-        background-color: #0a2f1f;
-        padding: 20px;
-        border-radius: 15px;
-        border-left: 8px solid #00ff88;
-        margin: 15px 0;
-        color: white;
-        box-shadow: 0 4px 8px rgba(0,255,136,0.2);
-    }
-    .ai-card-mid {
-        background-color: #2f2a0a;
-        padding: 20px;
-        border-radius: 15px;
-        border-left: 8px solid #ffaa00;
-        margin: 15px 0;
-        color: white;
-        box-shadow: 0 4px 8px rgba(255,170,0,0.2);
-    }
-    .ai-card-low {
-        background-color: #2f0a0a;
-        padding: 20px;
-        border-radius: 15px;
-        border-left: 8px solid #ff5555;
-        margin: 15px 0;
-        color: white;
-        box-shadow: 0 4px 8px rgba(255,85,85,0.2);
-    }
     .watchlist-header {
         background: linear-gradient(135deg, #1e3c72, #2a5298);
         padding: 20px;
@@ -92,14 +65,6 @@ st.markdown("""
         margin: 20px 0;
         text-align: center;
         color: white;
-    }
-    .top3-card {
-        background-color: #1e1e1e;
-        padding: 15px;
-        border-radius: 10px;
-        border-left: 5px solid #00ff88;
-        text-align: center;
-        height: 100%;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -315,7 +280,7 @@ if "Open = Low" in scan_mode:
             fig.update_layout(height=500)
             st.plotly_chart(fig, use_container_width=True)
             
-                       # ========== ANALISIS AI SIMPLE ==========
+            # ========== ANALISIS AI (SIMPLE) ==========
             st.markdown("## 🤖 Analisis AI")
             st.markdown("Analisis untuk top 5 saham dengan pola terbaik:")
             
@@ -323,7 +288,7 @@ if "Open = Low" in scan_mode:
                 # Panggil analisis AI
                 analysis = analyze_pattern(row.to_dict())
                 
-                # Tampilkan dengan expander biar aman
+                # Tampilkan dengan expander
                 with st.expander(f"📊 {row['saham']} - Prob: {row['probabilitas']:.1f}% | Gain: {row['rata_rata_kenaikan']:.1f}%"):
                     col1, col2, col3, col4 = st.columns(4)
                     with col1:
@@ -341,138 +306,6 @@ if "Open = Low" in scan_mode:
             
             # ========== WATCHLIST GENERATOR ==========
             st.markdown("## 📋 Watchlist Generator")
-            st.markdown("Top saham untuk dipantau besok:")
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                min_gain_filter = st.slider("🎯 Minimal gain rata-rata (%)", 3, 10, 5, key="min_gain")
-            with col2:
-                top_n = st.number_input("📊 Jumlah saham", 5, 30, 15, key="top_n")
-            
-            # Filter berdasarkan gain minimal
-            df_watchlist = df_results[df_results['rata_rata_kenaikan'] >= min_gain_filter].copy()
-            
-            if len(df_watchlist) > 0:
-                # Hitung skor gabungan
-                max_prob = df_watchlist['probabilitas'].max() if len(df_watchlist) > 0 else 1
-                max_gain = df_watchlist['rata_rata_kenaikan'].max() if len(df_watchlist) > 0 else 1
-                
-                df_watchlist['skor'] = (
-                    (df_watchlist['probabilitas'] / max_prob) * 50 +
-                    (df_watchlist['rata_rata_kenaikan'] / max_gain) * 50
-                )
-                
-                # Ambil top N
-                df_watchlist = df_watchlist.nlargest(top_n, 'skor')
-                
-                # Buat tabel watchlist
-                watchlist_data = []
-                for i, (idx, row) in enumerate(df_watchlist.iterrows()):
-                    if row['probabilitas'] >= 20 and row['rata_rata_kenaikan'] >= 7:
-                        rekom = "🔥 PRIORITAS"
-                    elif row['probabilitas'] >= 15 and row['rata_rata_kenaikan'] >= 5:
-                        rekom = "⚡ LAYAK"
-                    else:
-                        rekom = "📌 PANTAU"
-                    
-                    watchlist_data.append({
-                        "Rank": i + 1,
-                        "Saham": row['saham'],
-                        "Probabilitas": f"{row['probabilitas']:.1f}%",
-                        "Gain Rata": f"{row['rata_rata_kenaikan']:.1f}%",
-                        "Max Gain": f"{row['max_kenaikan']:.1f}%",
-                        "Frekuensi": f"{row['frekuensi']}x",
-                        "Rekomendasi": rekom
-                    })
-                
-                # Tampilkan dataframe
-                watchlist_df = pd.DataFrame(watchlist_data)
-                st.dataframe(
-                    watchlist_df,
-                    use_container_width=True,
-                    hide_index=True,
-                    height=400
-                )
-                
-                # Export buttons
-                st.markdown("### 📥 Export Watchlist")
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    csv_data = watchlist_df.to_csv(index=False).encode('utf-8')
-                    st.download_button(
-                        "📊 Download CSV",
-                        data=csv_data,
-                        file_name=f"watchlist_{datetime.now().strftime('%Y%m%d')}.csv",
-                        mime="text/csv",
-                        use_container_width=True
-                    )
-                
-                with col2:
-                    excel_data = export_to_excel(watchlist_df)
-                    st.download_button(
-                        "📈 Download Excel",
-                        data=excel_data,
-                        file_name=f"watchlist_{datetime.now().strftime('%Y%m%d')}.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        use_container_width=True
-                    )
-            else:
-                st.warning(f"Tidak ada saham dengan gain minimal {min_gain_filter}%")
-            
-            for idx, (i, row) in enumerate(df_results.head(5).iterrows()):
-                # Tentukan kelas card berdasarkan probabilitas
-                if row['probabilitas'] >= 20:
-                    card_class = "ai-card-high"
-                    prob_text = "🔥 PROBABILITAS TINGGI"
-                elif row['probabilitas'] >= 10:
-                    card_class = "ai-card-mid"
-                    prob_text = "⚠️ PROBABILITAS SEDANG"
-                else:
-                    card_class = "ai-card-low"
-                    prob_text = "📌 PROBABILITAS RENDAH"
-                
-                # Panggil analisis AI
-                analysis = analyze_pattern(row.to_dict())
-                
-                # Tampilkan card dengan HTML yang benar
-                st.markdown(f"""
-                <div class="{card_class}">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                        <h2 style="color: white; margin: 0;">📊 {row['saham']}</h2>
-                        <span style="background-color: rgba(255,255,255,0.2); padding: 5px 15px; border-radius: 20px; font-size: 0.9rem;">
-                            {prob_text}
-                        </span>
-                    </div>
-                    
-                    <div style="display: flex; flex-wrap: wrap; gap: 10px; margin: 15px 0;">
-                        <div style="flex: 1; min-width: 120px; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; text-align: center;">
-                            <div style="color: #aaa;">🎯 Probabilitas</div>
-                            <div style="color: #00ff88; font-weight: bold; font-size: 1.3rem;">{row['probabilitas']:.1f}%</div>
-                        </div>
-                        <div style="flex: 1; min-width: 120px; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; text-align: center;">
-                            <div style="color: #aaa;">💰 Rata Gain</div>
-                            <div style="color: #ffaa00; font-weight: bold; font-size: 1.3rem;">{row['rata_rata_kenaikan']:.1f}%</div>
-                        </div>
-                        <div style="flex: 1; min-width: 120px; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; text-align: center;">
-                            <div style="color: #aaa;">📈 Max Gain</div>
-                            <div style="color: #00ff88; font-weight: bold; font-size: 1.3rem;">{row['max_kenaikan']:.1f}%</div>
-                        </div>
-                        <div style="flex: 1; min-width: 120px; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; text-align: center;">
-                            <div style="color: #aaa;">📊 Frekuensi</div>
-                            <div style="color: white; font-weight: bold; font-size: 1.3rem;">{row['frekuensi']}x</div>
-                        </div>
-                    </div>
-                    
-                    <div style="background-color: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; margin-top: 10px;">
-                        <strong style="color: #1f77b4;">📋 KESIMPULAN AI:</strong><br>
-                        <span style="color: #ddd;">{analysis.replace('•', '▶').replace('\n', '<br>')}</span>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            # ========== WATCHLIST GENERATOR ==========
-            st.markdown("## 📋 Watchlist Generator")
             st.markdown("Top saham untuk dipantau besok (fokus pada yang sering Open=Low dengan gain tertinggi):")
             
             col1, col2 = st.columns(2)
@@ -486,13 +319,13 @@ if "Open = Low" in scan_mode:
             
             if len(df_watchlist) > 0:
                 # Hitung skor gabungan
-                if len(df_watchlist) > 0:
-                    max_prob = df_watchlist['probabilitas'].max()
-                    max_gain = df_watchlist['rata_rata_kenaikan'].max()
-                    
+                max_prob = df_watchlist['probabilitas'].max()
+                max_gain = df_watchlist['rata_rata_kenaikan'].max()
+                
+                if max_prob > 0 and max_gain > 0:
                     df_watchlist['skor'] = (
-                        (df_watchlist['probabilitas'] / max_prob if max_prob > 0 else 0) * 50 +
-                        (df_watchlist['rata_rata_kenaikan'] / max_gain if max_gain > 0 else 0) * 50
+                        (df_watchlist['probabilitas'] / max_prob) * 50 +
+                        (df_watchlist['rata_rata_kenaikan'] / max_gain) * 50
                     )
                     
                     # Ambil top N
@@ -502,8 +335,8 @@ if "Open = Low" in scan_mode:
                 st.markdown(f"""
                 <div class="watchlist-header">
                     <h2 style="color: white; margin: 0;">📋 WATCHLIST TRADING</h2>
-                    <p style="color: #a8d8ff; font-size: 1.2rem; margin: 10px 0 0 0;">{datetime.now().strftime('%d %B %Y')}</p>
-                    <p style="color: #ffaa00; margin: 10px 0 0 0;">Pantau 15 menit pertama! Open=Low = Siap eksekusi 🎯</p>
+                    <p style="color: #a8d8ff; font-size: 1.2rem;">{datetime.now().strftime('%d %B %Y')}</p>
+                    <p style="color: #ffaa00;">Pantau 15 menit pertama! Open=Low = Siap eksekusi 🎯</p>
                 </div>
                 """, unsafe_allow_html=True)
                 
@@ -536,49 +369,28 @@ if "Open = Low" in scan_mode:
                     height=400
                 )
                 
-                # TOP 3 HIGHLIGHT
-                st.markdown("### 🏆 TOP 3 SAHAM TERBAIK")
-                cols = st.columns(3)
-                
-                for i, (idx, row) in enumerate(df_watchlist.head(3).iterrows()):
-                    with cols[i]:
-                        st.markdown(f"""
-                        <div class="top3-card">
-                            <h3 style="color: #00ff88; margin: 0;">#{i+1}</h3>
-                            <h2 style="color: white; margin: 10px 0;">{row['saham']}</h2>
-                            <table style="width: 100%; color: white; margin: 15px 0;">
-                                <tr><td style="text-align: left;">📊 Probabilitas</td><td style="text-align: right;"><b style="color: #00ff88;">{row['probabilitas']:.1f}%</b></td></tr>
-                                <tr><td style="text-align: left;">💰 Gain Rata</td><td style="text-align: right;"><b style="color: #ffaa00;">{row['rata_rata_kenaikan']:.1f}%</b></td></tr>
-                                <tr><td style="text-align: left;">📈 Max Gain</td><td style="text-align: right;"><b style="color: #00ff88;">{row['max_kenaikan']:.1f}%</b></td></tr>
-                                <tr><td style="text-align: left;">📅 Frekuensi</td><td style="text-align: right;"><b>{row['frekuensi']}x</b></td></tr>
-                            </table>
-                            <p style="color: #aaa; font-size: 0.9rem;">Pantau besok pagi!</p>
-                        </div>
-                        """, unsafe_allow_html=True)
-                
-                # Export buttons
+                # Export buttons - VERSI SIMPLE
                 st.markdown("### 📥 Export Watchlist")
-                col1, col2 = st.columns(2)
                 
-                with col1:
-                    csv_data = watchlist_df.to_csv(index=False).encode('utf-8')
-                    st.download_button(
-                        "📊 Download CSV",
-                        data=csv_data,
-                        file_name=f"watchlist_{datetime.now().strftime('%Y%m%d')}.csv",
-                        mime="text/csv",
-                        use_container_width=True
-                    )
+                # Export CSV
+                csv_data = watchlist_df.to_csv(index=False).encode('utf-8')
+                st.download_button(
+                    label="📊 Download CSV",
+                    data=csv_data,
+                    file_name=f"watchlist_{datetime.now().strftime('%Y%m%d')}.csv",
+                    mime="text/csv",
+                    use_container_width=True
+                )
                 
-                with col2:
-                    excel_data = export_to_excel(watchlist_df)
-                    st.download_button(
-                        "📈 Download Excel",
-                        data=excel_data,
-                        file_name=f"watchlist_{datetime.now().strftime('%Y%m%d')}.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        use_container_width=True
-                    )
+                # Export Excel (pake fungsi dari utils)
+                excel_data = export_to_excel(watchlist_df)
+                st.download_button(
+                    label="📈 Download Excel",
+                    data=excel_data,
+                    file_name=f"watchlist_{datetime.now().strftime('%Y%m%d')}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True
+                )
                 
                 # Tips
                 st.info("""
@@ -597,7 +409,7 @@ if "Open = Low" in scan_mode:
             if st.button("📊 Export Hasil Scanning ke Excel", use_container_width=True):
                 excel_data = export_to_excel(display_df)
                 st.download_button(
-                    label="💾 Download Excel",
+                    label="💾 Download Excel Scanning",
                     data=excel_data,
                     file_name=f"open_low_scanner_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -712,6 +524,7 @@ elif "Low Float" in scan_mode:
                     st.plotly_chart(fig, use_container_width=True)
                 
                 # Export
+                st.markdown("### 📥 Export Data")
                 if st.button("📊 Export ke Excel", use_container_width=True):
                     excel_data = export_to_excel(display_df)
                     st.download_button(
