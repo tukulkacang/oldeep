@@ -195,7 +195,7 @@ if "Open = Low" in scan_mode:
             remaining = (elapsed / (i + 1)) * (len(stocks_to_scan) - (i + 1))
             
             status_text.text(
-                f"📊 Memproses {stock}... ({i+1}/{len(stocks_to_scan}) | "
+                f"📊 Memproses {stock}... ({i+1}/{len(stocks_to_scan)}) | "
                 f"Elapsed: {elapsed:.0f}s | Remaining: {remaining:.0f}s"
             )
             
