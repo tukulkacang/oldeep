@@ -46,12 +46,6 @@ st.markdown("""
         color: white;
         font-weight: bold;
     }
-    .success-box {
-        padding: 1rem;
-        background-color: #d4edda;
-        border-left: 4px solid #28a745;
-        border-radius: 0.25rem;
-    }
     .warning-box {
         padding: 1rem;
         background-color: #fff3cd;
@@ -231,8 +225,7 @@ if "Open = Low" in scan_mode:
             df_results = pd.DataFrame(results)
             df_results = df_results.sort_values('frekuensi', ascending=False).head(limit_saham)
             
-            # Success message
-                        # Success message - VERSI ELEGAN
+            # ========== SUCCESS BOX ELEGAN ==========
             st.markdown(f"""
             <div style="
                 background: linear-gradient(135deg, #667eea, #764ba2);
@@ -361,7 +354,7 @@ if "Open = Low" in scan_mode:
             fig.update_layout(height=500)
             st.plotly_chart(fig, use_container_width=True)
             
-            # ========== ANALISIS AI (SIMPLE) ==========
+            # ========== ANALISIS AI ==========
             st.markdown("## 🤖 Analisis AI")
             st.markdown("Analisis untuk top 5 saham dengan pola terbaik:")
             
@@ -450,7 +443,7 @@ if "Open = Low" in scan_mode:
                     height=400
                 )
                 
-                # Export buttons - VERSI SIMPLE
+                # Export buttons
                 st.markdown("### 📥 Export Watchlist")
                 
                 # Export CSV
@@ -463,7 +456,7 @@ if "Open = Low" in scan_mode:
                     use_container_width=True
                 )
                 
-                # Export Excel (pake fungsi dari utils)
+                # Export Excel
                 excel_data = export_to_excel(watchlist_df)
                 st.download_button(
                     label="📈 Download Excel",
@@ -498,7 +491,14 @@ if "Open = Low" in scan_mode:
                 )
         else:
             st.markdown("""
-            <div class="warning-box">
+            <div style="
+                background: linear-gradient(135deg, #f093fb, #f5576c);
+                padding: 20px;
+                border-radius: 15px;
+                text-align: center;
+                color: white;
+                border-left: 8px solid #ffd700;
+            ">
                 ⚠️ Tidak ditemukan saham dengan kriteria yang sesuai.<br>
                 Coba turunkan minimal kenaikan atau perpanjang periode analisis.
             </div>
@@ -549,8 +549,18 @@ elif "Low Float" in scan_mode:
                 df_results = pd.DataFrame(results)
                 
                 st.markdown(f"""
-                <div class="success-box">
-                    ✅ **Berhasil!** Ditemukan {len(df_results)} saham Low Float
+                <div style="
+                    background: linear-gradient(135deg, #11998e, #38ef7d);
+                    padding: 25px;
+                    border-radius: 15px;
+                    margin: 20px 0;
+                    text-align: center;
+                    color: white;
+                    border: 2px solid #ffd700;
+                ">
+                    <h2 style="color: #ffd700; margin: 0;">✅ SCAN LOW FLOAT BERHASIL</h2>
+                    <p style="font-size: 2rem; margin: 10px 0;">{len(df_results)} SAHAM</p>
+                    <p>Ditemukan saham dengan public float di bawah {max_public_float}%</p>
                 </div>
                 """, unsafe_allow_html=True)
                 
@@ -617,7 +627,13 @@ elif "Low Float" in scan_mode:
                     )
             else:
                 st.markdown("""
-                <div class="warning-box">
+                <div style="
+                    background: linear-gradient(135deg, #f093fb, #f5576c);
+                    padding: 20px;
+                    border-radius: 15px;
+                    text-align: center;
+                    color: white;
+                ">
                     ⚠️ Tidak ditemukan saham low float dengan kriteria tersebut.<br>
                     Coba naikkan maksimal public float atau turunkan minimal volume.
                 </div>
