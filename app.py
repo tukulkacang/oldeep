@@ -22,8 +22,6 @@ SHAREHOLDER_DATA = {
     # PRAJOGO PANGESTU (Barito Pacific)
     'CUAN': {
         'pemegang': [
-            # PENGENDALI (TIDAK DITAMPILKAN DI FREE FLOAT)
-            # {'nama': 'Prajogo Pangestu', 'persen': 84.10, 'tipe': 'Pengendali', 'catatan': 'TIDAK MASUK FREE FLOAT', 'update': 'Feb 2026'},
             {'nama': 'BPJS Ketenagakerjaan', 'persen': 1.02, 'tipe': 'Institusi', 'catatan': 'Masuk Q4 2025', 'update': 'Feb 2026'},
             {'nama': 'Vanguard', 'persen': 1.15, 'tipe': 'Asing', 'catatan': 'Nambah Jan 2026', 'update': 'Feb 2026'}
         ],
@@ -36,7 +34,6 @@ SHAREHOLDER_DATA = {
     },
     'BRPT': {
         'pemegang': [
-            # {'nama': 'Prajogo Pangestu', 'persen': 71.37, 'tipe': 'Pengendali', 'catatan': 'TIDAK MASUK FREE FLOAT', 'update': 'Feb 2026'},
             {'nama': 'BPJS Ketenagakerjaan', 'persen': 1.22, 'tipe': 'Institusi', 'catatan': 'Nambah Feb 2026', 'update': 'Feb 2026'}
         ],
         'free_float': 27.41,
@@ -47,7 +44,6 @@ SHAREHOLDER_DATA = {
     },
     'TPIA': {
         'pemegang': [
-            # {'nama': 'Prajogo Pangestu', 'persen': 5.03, 'tipe': 'Pengendali', 'catatan': 'TIDAK MASUK FREE FLOAT', 'update': 'Feb 2026'},
             {'nama': 'GIC Singapore', 'persen': 3.45, 'tipe': 'Asing', 'catatan': 'Masuk Jan 2026', 'update': 'Feb 2026'}
         ],
         'free_float': 91.52,
@@ -58,7 +54,6 @@ SHAREHOLDER_DATA = {
     # BOY THOHIR
     'TRIM': {
         'pemegang': [
-            # {'nama': 'Boy Thohir', 'persen': 34.68, 'tipe': 'Pengendali', 'catatan': 'TIDAK MASUK FREE FLOAT', 'update': 'Feb 2026'},
             {'nama': 'BPJS Ketenagakerjaan', 'persen': 2.15, 'tipe': 'Institusi', 'catatan': 'Nambah Des 2025', 'update': 'Feb 2026'}
         ],
         'free_float': 63.17,
@@ -67,7 +62,6 @@ SHAREHOLDER_DATA = {
     },
     'MDKA': {
         'pemegang': [
-            # {'nama': 'Boy Thohir', 'persen': 7.46, 'tipe': 'Pengendali', 'catatan': 'TIDAK MASUK FREE FLOAT', 'update': 'Feb 2026'},
             {'nama': 'BPJS Ketenagakerjaan', 'persen': 2.15, 'tipe': 'Institusi', 'catatan': 'Nambah', 'update': 'Feb 2026'},
             {'nama': 'Pemerintah Norwegia', 'persen': 1.08, 'tipe': 'Asing', 'catatan': 'Masuk Q1 2026', 'update': 'Feb 2026'}
         ],
@@ -81,7 +75,6 @@ SHAREHOLDER_DATA = {
     # ANTHONI SALIM
     'BBCA': {
         'pemegang': [
-            # {'nama': 'Anthoni Salim', 'persen': 1.15, 'tipe': 'Pengendali', 'catatan': 'TIDAK MASUK FREE FLOAT', 'update': 'Feb 2026'},
             {'nama': 'BPJS Ketenagakerjaan', 'persen': 1.06, 'tipe': 'Institusi', 'catatan': 'Nambah', 'update': 'Feb 2026'},
             {'nama': 'Vanguard', 'persen': 1.23, 'tipe': 'Asing', 'catatan': 'Nambah', 'update': 'Feb 2026'}
         ],
@@ -94,7 +87,6 @@ SHAREHOLDER_DATA = {
     },
     'INDF': {
         'pemegang': [
-            # {'nama': 'Anthoni Salim', 'persen': 3.74, 'tipe': 'Pengendali', 'catatan': 'TIDAK MASUK FREE FLOAT', 'update': 'Feb 2026'},
             {'nama': 'BPJS Ketenagakerjaan', 'persen': 3.74, 'tipe': 'Institusi', 'catatan': 'Nambah', 'update': 'Feb 2026'}
         ],
         'free_float': 92.52,
@@ -102,9 +94,7 @@ SHAREHOLDER_DATA = {
         'insider_activity': []
     },
     'CBDK': {
-        'pemegang': [
-            # {'nama': 'Anthoni Salim', 'persen': 0.93, 'tipe': 'Pengendali', 'catatan': 'TIDAK MASUK FREE FLOAT', 'update': 'Feb 2026'}
-        ],
+        'pemegang': [],
         'free_float': 99.07,
         'total_shares': 1122334455,
         'insider_activity': [
@@ -115,7 +105,6 @@ SHAREHOLDER_DATA = {
     # LOW TUCK KWONG
     'BYAN': {
         'pemegang': [
-            # {'nama': 'Low Tuck Kwong', 'persen': 40.22, 'tipe': 'Pengendali', 'catatan': 'TIDAK MASUK FREE FLOAT', 'update': 'Feb 2026'},
             {'nama': 'BPJS Ketenagakerjaan', 'persen': 1.33, 'tipe': 'Institusi', 'catatan': 'Nambah', 'update': 'Feb 2026'}
         ],
         'free_float': 58.45,
@@ -125,9 +114,7 @@ SHAREHOLDER_DATA = {
     
     # HARY TANOE
     'BHIT': {
-        'pemegang': [
-            # {'nama': 'Hary Tanoe', 'persen': 3.12, 'tipe': 'Pengendali', 'catatan': 'TIDAK MASUK FREE FLOAT', 'update': 'Feb 2026'}
-        ],
+        'pemegang': [],
         'free_float': 96.88,
         'total_shares': 5566778899,
         'insider_activity': []
@@ -135,9 +122,7 @@ SHAREHOLDER_DATA = {
     
     # DATO SRI TAHIR
     'MAYA': {
-        'pemegang': [
-            # {'nama': 'Dato Sri Tahir', 'persen': 19.34, 'tipe': 'Pengendali', 'catatan': 'TIDAK MASUK FREE FLOAT', 'update': 'Feb 2026'}
-        ],
+        'pemegang': [],
         'free_float': 80.66,
         'total_shares': 4455667788,
         'insider_activity': []
@@ -600,28 +585,40 @@ if "Open = Low" in scan_mode:
                 unsafe_allow_html=True
             )
             
-            # Tampilkan hasil
-            st.markdown("### 📋 Hasil Scanning")
+            # ========== HASIL SCANNING + FREE FLOAT ==========
+            st.markdown("### 📋 Hasil Scanning + Data Free Float")
             
-            display_df = df_results[[
-                'saham', 'frekuensi', 'probabilitas', 
-                'rata_rata_kenaikan', 'max_kenaikan', 'last_kenaikan'
-            ]].copy()
+            # Ambil data free float untuk setiap saham
+            enhanced_results = []
+            for _, row in df_results.iterrows():
+                saham = row['saham']
+                free_float = get_free_float_value(saham)
+                holders = get_free_float_holders(saham)
+                
+                # Hitung total institusi + asing di free float
+                total_inst_asing = 0
+                for p in holders:
+                    persen_dalam_ff = (p['persen'] / free_float) * 100 if free_float > 0 else 0
+                    total_inst_asing += persen_dalam_ff
+                
+                sisa_ritel = 100 - total_inst_asing
+                potensi = analyze_goreng_potential(free_float)
+                
+                enhanced_results.append({
+                    'Saham': saham,
+                    'Frek': row['frekuensi'],
+                    'Prob': f"{row['probabilitas']:.0f}%",
+                    'Gain': f"{row['rata_rata_kenaikan']:.0f}%",
+                    'Max': f"{row['max_kenaikan']:.0f}%",
+                    'FF': f"{free_float:.0f}%",
+                    'Inst': f"{total_inst_asing:.0f}%",
+                    'Ritel': f"{sisa_ritel:.0f}%",
+                    'Pot': potensi
+                })
             
-            display_df.columns = [
-                'Saham', 'Frekuensi', 'Probabilitas (%)', 
-                'Rata-rata Gain (%)', 'Max Gain (%)', 'Gain Terakhir (%)'
-            ]
-            
-            # Format dulu sebelum ditampilkan
-            display_df_display = display_df.copy()
-            display_df_display['Probabilitas (%)'] = display_df_display['Probabilitas (%)'].apply(lambda x: f"{x:.1f}%")
-            display_df_display['Rata-rata Gain (%)'] = display_df_display['Rata-rata Gain (%)'].apply(lambda x: f"{x:.1f}%")
-            display_df_display['Max Gain (%)'] = display_df_display['Max Gain (%)'].apply(lambda x: f"{x:.1f}%")
-            display_df_display['Gain Terakhir (%)'] = display_df_display['Gain Terakhir (%)'].apply(lambda x: f"{x:.1f}%")
-            
+            enhanced_df = pd.DataFrame(enhanced_results)
             st.dataframe(
-                display_df_display,
+                enhanced_df,
                 use_container_width=True,
                 height=500,
                 hide_index=True
@@ -664,7 +661,7 @@ if "Open = Low" in scan_mode:
                     st.markdown("**📋 Kesimpulan AI:**")
                     st.markdown(analysis)
                     
-                    # Tambah info pemegang free float
+                    # Tambah info free float
                     free_float = get_free_float_value(row['saham'])
                     st.markdown(display_free_float_info(row['saham'], free_float), unsafe_allow_html=True)
                     
@@ -777,7 +774,7 @@ if "Open = Low" in scan_mode:
             col_scan1, col_scan2 = st.columns(2)
             
             with col_scan1:
-                csv_data_scan = display_df.to_csv(index=False).encode('utf-8')
+                csv_data_scan = enhanced_df.to_csv(index=False).encode('utf-8')
                 st.download_button(
                     label="📊 CSV",
                     data=csv_data_scan,
@@ -787,7 +784,7 @@ if "Open = Low" in scan_mode:
                 )
             
             with col_scan2:
-                excel_data_scan = export_to_excel(display_df)
+                excel_data_scan = export_to_excel(enhanced_df)
                 if excel_data_scan:
                     st.download_button(
                         label="📈 Excel",
@@ -866,12 +863,15 @@ elif "Low Float" in scan_mode:
                     
                     # Hitung komposisi free float
                     holders = get_free_float_holders(saham)
-                    total_inst_asing = sum([(p['persen'] / free_float) * 100 for p in holders])
+                    total_inst_asing = 0
+                    for p in holders:
+                        persen_dalam_ff = (p['persen'] / free_float) * 100 if free_float > 0 else 0
+                        total_inst_asing += persen_dalam_ff
                     sisa_ritel = 100 - total_inst_asing
                     
                     enriched_results.append({
                         'Saham': saham,
-                        'FF': f"{free_float:.1f}%",
+                        'FF': f"{free_float:.0f}%",
                         'Kat': kategori_singkat,
                         'Vol': f"{row['volume_avg']/1e6:.1f}M",
                         'Volat': f"{row['volatility']:.0f}%",
@@ -892,7 +892,7 @@ elif "Low Float" in scan_mode:
                 st.markdown("### 🔍 Detail Free Float")
                 for _, row in df_results.head(5).iterrows():
                     free_float = get_free_float_value(row['saham'])
-                    with st.expander(f"📊 {row['saham']} - FF: {free_float:.1f}%"):
+                    with st.expander(f"📊 {row['saham']} - FF: {free_float:.0f}%"):
                         st.markdown(display_free_float_info(row['saham'], free_float), unsafe_allow_html=True)
                 
                 # Visualisasi
