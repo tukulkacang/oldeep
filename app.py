@@ -315,9 +315,110 @@ if "Open = Low" in scan_mode:
             fig.update_layout(height=500)
             st.plotly_chart(fig, use_container_width=True)
             
-            # ========== ANALISIS AI ==========
+                       # ========== ANALISIS AI SIMPLE ==========
             st.markdown("## 🤖 Analisis AI")
-            st.markdown("Analisis mendalam untuk top 5 saham dengan pola terbaik:")
+            st.markdown("Analisis untuk top 5 saham dengan pola terbaik:")
+            
+            for idx, (i, row) in enumerate(df_results.head(5).iterrows()):
+                # Panggil analisis AI
+                analysis = analyze_pattern(row.to_dict())
+                
+                # Tampilkan dengan expander biar aman
+                with st.expander(f"📊 {row['saham']} - Prob: {row['probabilitas']:.1f}% | Gain: {row['rata_rata_kenaikan']:.1f}%"):
+                    col1, col2, col3, col4 = st.columns(4)
+                    with col1:
+                        st.metric("🎯 Probabilitas", f"{row['probabilitas']:.1f}%")
+                    with col2:
+                        st.metric("💰 Rata Gain", f"{row['rata_rata_kenaikan']:.1f}%")
+                    with col3:
+                        st.metric("📈 Max Gain", f"{row['max_kenaikan']:.1f}%")
+                    with col4:
+                        st.metric("📊 Frekuensi", f"{row['frekuensi']}x")
+                    
+                    st.markdown("**📋 Kesimpulan AI:**")
+                    st.markdown(analysis)
+                    st.markdown("---")
+            
+            # ========== WATCHLIST GENERATOR ==========
+            st.markdown("## 📋 Watchlist Generator")
+            st.markdown("Top saham untuk dipantau besok:")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                min_gain_filter = st.slider("🎯 Minimal gain rata-rata (%)", 3, 10, 5, key="min_gain")
+            with col2:
+                top_n = st.number_input("📊 Jumlah saham", 5, 30, 15, key="top_n")
+            
+            # Filter berdasarkan gain minimal
+            df_watchlist = df_results[df_results['rata_rata_kenaikan'] >= min_gain_filter].copy()
+            
+            if len(df_watchlist) > 0:
+                # Hitung skor gabungan
+                max_prob = df_watchlist['probabilitas'].max() if len(df_watchlist) > 0 else 1
+                max_gain = df_watchlist['rata_rata_kenaikan'].max() if len(df_watchlist) > 0 else 1
+                
+                df_watchlist['skor'] = (
+                    (df_watchlist['probabilitas'] / max_prob) * 50 +
+                    (df_watchlist['rata_rata_kenaikan'] / max_gain) * 50
+                )
+                
+                # Ambil top N
+                df_watchlist = df_watchlist.nlargest(top_n, 'skor')
+                
+                # Buat tabel watchlist
+                watchlist_data = []
+                for i, (idx, row) in enumerate(df_watchlist.iterrows()):
+                    if row['probabilitas'] >= 20 and row['rata_rata_kenaikan'] >= 7:
+                        rekom = "🔥 PRIORITAS"
+                    elif row['probabilitas'] >= 15 and row['rata_rata_kenaikan'] >= 5:
+                        rekom = "⚡ LAYAK"
+                    else:
+                        rekom = "📌 PANTAU"
+                    
+                    watchlist_data.append({
+                        "Rank": i + 1,
+                        "Saham": row['saham'],
+                        "Probabilitas": f"{row['probabilitas']:.1f}%",
+                        "Gain Rata": f"{row['rata_rata_kenaikan']:.1f}%",
+                        "Max Gain": f"{row['max_kenaikan']:.1f}%",
+                        "Frekuensi": f"{row['frekuensi']}x",
+                        "Rekomendasi": rekom
+                    })
+                
+                # Tampilkan dataframe
+                watchlist_df = pd.DataFrame(watchlist_data)
+                st.dataframe(
+                    watchlist_df,
+                    use_container_width=True,
+                    hide_index=True,
+                    height=400
+                )
+                
+                # Export buttons
+                st.markdown("### 📥 Export Watchlist")
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    csv_data = watchlist_df.to_csv(index=False).encode('utf-8')
+                    st.download_button(
+                        "📊 Download CSV",
+                        data=csv_data,
+                        file_name=f"watchlist_{datetime.now().strftime('%Y%m%d')}.csv",
+                        mime="text/csv",
+                        use_container_width=True
+                    )
+                
+                with col2:
+                    excel_data = export_to_excel(watchlist_df)
+                    st.download_button(
+                        "📈 Download Excel",
+                        data=excel_data,
+                        file_name=f"watchlist_{datetime.now().strftime('%Y%m%d')}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        use_container_width=True
+                    )
+            else:
+                st.warning(f"Tidak ada saham dengan gain minimal {min_gain_filter}%")
             
             for idx, (i, row) in enumerate(df_results.head(5).iterrows()):
                 # Tentukan kelas card berdasarkan probabilitas
