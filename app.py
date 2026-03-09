@@ -422,16 +422,33 @@ if "Open = Low" in scan_mode:
                 st.warning(f"Tidak ada saham dengan gain minimal {min_gain_filter}%. Coba turunkan filternya.")
             
             # Export hasil scanning utama
+                        # ========== EXPORT DATA ==========
             st.markdown("### 📥 Export Data Scanning")
-            if st.button("📊 Export Hasil Scanning ke Excel", use_container_width=True):
-                excel_data = export_to_excel(display_df)
-                st.download_button(
-                    label="💾 Download Excel Scanning",
-                    data=excel_data,
-                    file_name=f"open_low_scanner_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True
-                )
+            
+            # Tombol export simple
+            if st.button("📊 EXPORT KE EXCEL", use_container_width=True):
+                with st.spinner("Menyiapkan file Excel..."):
+                    try:
+                        # Ambil data yang mau diexport
+                        export_data = display_df.copy()
+                        
+                        # Export pake fungsi kita
+                        excel_file = export_to_excel(export_data)
+                        
+                        if excel_file:
+                            # Kasih tombol download
+                            st.download_button(
+                                label="💾 KLIK DOWNLOAD FILE",
+                                data=excel_file,
+                                file_name=f"hasil_scan_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                use_container_width=True
+                            )
+                            st.success("File siap didownload!")
+                        else:
+                            st.error("Gagal bikin file Excel")
+                    except Exception as e:
+                        st.error(f"Error: {e}")
         else:
             st.markdown(
                 """
