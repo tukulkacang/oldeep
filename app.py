@@ -5,13 +5,13 @@ import plotly.express as px
 from datetime import datetime, timedelta
 import time
 
-# Import modules kita - SEMUA NAMA FILE SUDAH BENAR
+# Import modules kita
 from data.stocks_list import STOCKS_LIST, get_sector
 from modules.data_fetcher import get_stock_data, get_current_price, get_fundamental_data
-from modules.open_low_scanner import scan_open_low_pattern, scan_multiple_stocks, get_pattern_summary
+from modules.open_low_scanner import scan_open_low_pattern, get_pattern_summary
 from modules.low_float_scanner import scan_low_float, get_low_float_summary
 from modules.ai_analyzer import analyze_pattern, analyze_low_float, predict_next_pattern, get_market_context
-from utils.exporters import export_to_excel, export_to_pdf, format_number
+from utils.exporters import export_to_excel, format_number
 
 # Config halaman
 st.set_page_config(
@@ -40,17 +40,23 @@ st.markdown("""
         font-size: 1rem;
         color: #7f8c8d;
     }
-    .metric-card {
-        background-color: #f8f9fa;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        border-left: 4px solid #1f77b4;
-    }
     .stButton>button {
         width: 100%;
         background-color: #1f77b4;
         color: white;
         font-weight: bold;
+    }
+    .success-box {
+        padding: 1rem;
+        background-color: #d4edda;
+        border-left: 4px solid #28a745;
+        border-radius: 0.25rem;
+    }
+    .warning-box {
+        padding: 1rem;
+        background-color: #fff3cd;
+        border-left: 4px solid #ffc107;
+        border-radius: 0.25rem;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -89,10 +95,14 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("### 📌 Info")
     st.markdown("""
-    - Data: Yahoo Finance
-    - Update: Real-time
-    - Tujuan: Edukasi
+    - **Data:** Yahoo Finance
+    - **Total Saham:** 900+
+    - **Update:** Real-time
+    - **Tujuan:** Edukasi
     """)
+    
+    st.markdown("---")
+    st.caption("Made with ❤️ for Indonesian Traders")
 
 # MAIN CONTENT
 if "Open = Low" in scan_mode:
@@ -104,14 +114,44 @@ if "Open = Low" in scan_mode:
         periode = st.selectbox(
             "📅 Periode Analisis",
             ["7 Hari", "14 Hari", "30 Hari", "90 Hari", "180 Hari", "365 Hari"],
-            index=2
+            index=2,
+            help="Pilih periode waktu untuk analisis"
         )
     
     with col2:
-        min_kenaikan = st.slider("📈 Minimal Kenaikan (%)", 1, 20, 5)
+        min_kenaikan = st.slider(
+            "📈 Minimal Kenaikan (%)", 
+            1, 20, 5,
+            help="Minimal persentase kenaikan dari Low ke Close"
+        )
     
     with col3:
-        limit_saham = st.number_input("🎯 Limit Hasil", min_value=5, max_value=100, value=20)
+        limit_saham = st.number_input(
+            "🎯 Limit Hasil", 
+            min_value=5, 
+            max_value=100, 
+            value=20,
+            help="Jumlah maksimal saham yang ditampilkan"
+        )
+    
+    # Opsi mode scanning
+    st.markdown("### 🔍 Mode Scanning")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        scan_option = st.radio(
+            "Pilih kecepatan scanning:",
+            ["⚡ Cepat (50 saham)", "🐢 Lengkap (Semua saham)"],
+            index=0,
+            horizontal=True
+        )
+    
+    with col2:
+        st.info(
+            "⚡ **Cepat:** ±30 detik\n\n"
+            "🐢 **Lengkap:** ±7-10 menit\n\n"
+            "Gunakan mode lengkap untuk analisis mendalam"
+        )
     
     periode_map = {
         "7 Hari": 7, "14 Hari": 14, "30 Hari": 30, 
@@ -119,58 +159,135 @@ if "Open = Low" in scan_mode:
     }
     hari = periode_map[periode]
     
+    # Tombol scan
     if st.button("🚀 MULAI SCANNING", type="primary", use_container_width=True):
-        stocks_to_scan = selected_stocks if selected_stocks else STOCKS_LIST[:50]
+        # Tentukan stocks yang akan discan
+        if selected_stocks:
+            stocks_to_scan = selected_stocks
+        else:
+            if scan_option == "⚡ Cepat (50 saham)":
+                stocks_to_scan = STOCKS_LIST[:50]
+            else:
+                stocks_to_scan = STOCKS_LIST
         
-        with st.spinner("Sedang menganalisis pola saham..."):
-            progress_bar = st.progress(0)
-            status_text = st.empty()
+        # Hitung estimasi waktu
+        estimasi_detik = len(stocks_to_scan) * 0.5  # 0.5 detik per saham
+        estimasi_menit = estimasi_detik / 60
+        
+        # Tampilkan warning
+        warning_box = st.container()
+        with warning_box:
+            if estimasi_menit > 2:
+                st.warning(f"⏱️ **Memproses {len(stocks_to_scan)} saham**\n\nEstimasi waktu: **{estimasi_menit:.1f} menit**\n\nHarap sabar ya bro! Jangan refresh halaman.")
+            else:
+                st.info(f"📊 Memproses {len(stocks_to_scan)} saham. Estimasi: {estimasi_detik:.0f} detik")
+        
+        # Progress bar
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        
+        results = []
+        start_time = time.time()
+        
+        for i, stock in enumerate(stocks_to_scan):
+            # Update status
+            elapsed = time.time() - start_time
+            remaining = (elapsed / (i + 1)) * (len(stocks_to_scan) - (i + 1))
             
-            results = []
-            for i, stock in enumerate(stocks_to_scan):
-                status_text.text(f"📊 Memproses {stock}... ({i+1}/{len(stocks_to_scan)})")
-                
-                result = scan_open_low_pattern(
-                    stock, 
-                    periode_hari=hari,
-                    min_kenaikan=min_kenaikan
-                )
-                
-                if result:
-                    results.append(result)
-                
-                progress_bar.progress((i + 1) / len(stocks_to_scan))
-                time.sleep(0.3)
+            status_text.text(
+                f"📊 Memproses {stock}... ({i+1}/{len(stocks_to_scan}) | "
+                f"Elapsed: {elapsed:.0f}s | Remaining: {remaining:.0f}s"
+            )
             
-            progress_bar.empty()
-            status_text.empty()
+            # Scan pattern
+            result = scan_open_low_pattern(
+                stock, 
+                periode_hari=hari,
+                min_kenaikan=min_kenaikan
+            )
             
-            if results:
-                df_results = pd.DataFrame(results)
-                df_results = df_results.sort_values('frekuensi', ascending=False).head(limit_saham)
-                
-                st.success(f"✅ Ditemukan {len(df_results)} saham dengan pola Open=Low!")
-                
-                # Tampilkan hasil
-                st.dataframe(
-                    df_results[[
-                        'saham', 'frekuensi', 'probabilitas', 
-                        'rata_rata_kenaikan', 'max_kenaikan'
-                    ]],
+            if result:
+                results.append(result)
+            
+            # Update progress
+            progress_bar.progress((i + 1) / len(stocks_to_scan))
+            time.sleep(0.3)  # Hindari rate limit
+        
+        # Selesai
+        progress_bar.empty()
+        status_text.empty()
+        
+        total_time = time.time() - start_time
+        
+        if results:
+            # Convert ke DataFrame
+            df_results = pd.DataFrame(results)
+            df_results = df_results.sort_values('frekuensi', ascending=False).head(limit_saham)
+            
+            # Success message
+            st.markdown(f"""
+            <div class="success-box">
+                ✅ **Berhasil!** Ditemukan {len(df_results)} saham dengan pola Open=Low<br>
+                ⏱️ Waktu proses: {total_time:.0f} detik
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Tampilkan hasil
+            st.markdown("### 📋 Hasil Scanning")
+            
+            display_df = df_results[[
+                'saham', 'frekuensi', 'probabilitas', 
+                'rata_rata_kenaikan', 'max_kenaikan', 'last_kenaikan'
+            ]].copy()
+            
+            display_df.columns = [
+                'Saham', 'Frekuensi', 'Probabilitas (%)', 
+                'Rata-rata Gain (%)', 'Max Gain (%)', 'Gain Terakhir (%)'
+            ]
+            
+            st.dataframe(
+                display_df.style.format({
+                    'Probabilitas (%)': '{:.1f}%',
+                    'Rata-rata Gain (%)': '{:.1f}%',
+                    'Max Gain (%)': '{:.1f}%',
+                    'Gain Terakhir (%)': '{:.1f}%'
+                }).background_gradient(subset=['Probabilitas (%)'], cmap='YlOrRd'),
+                use_container_width=True,
+                height=500
+            )
+            
+            # Visualisasi
+            st.markdown("### 📊 Top 10 Saham")
+            fig = px.bar(
+                df_results.head(10),
+                x='saham',
+                y='frekuensi',
+                title="10 Saham dengan Frekuensi Tertinggi",
+                labels={'saham': 'Saham', 'frekuensi': 'Frekuensi'},
+                color='probabilitas',
+                color_continuous_scale='Viridis'
+            )
+            fig.update_layout(height=500)
+            st.plotly_chart(fig, use_container_width=True)
+            
+            # Export
+            st.markdown("### 📥 Export Data")
+            if st.button("📊 Export ke Excel", use_container_width=True):
+                excel_data = export_to_excel(display_df)
+                st.download_button(
+                    label="💾 Download Excel",
+                    data=excel_data,
+                    file_name=f"open_low_scanner_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     use_container_width=True
                 )
-                
-                # Export
-                if st.button("📥 Export ke Excel"):
-                    excel_data = export_to_excel(df_results)
-                    st.download_button(
-                        label="Download Excel",
-                        data=excel_data,
-                        file_name=f"open_low_scanner_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    )
-            else:
-                st.warning("⚠️ Tidak ditemukan saham dengan kriteria yang sesuai.")
+        else:
+            st.markdown("""
+            <div class="warning-box">
+                ⚠️ Tidak ditemukan saham dengan kriteria yang sesuai.<br>
+                Coba turunkan minimal kenaikan atau perpanjang periode analisis.
+            </div>
+            """, unsafe_allow_html=True)
 
 elif "Low Float" in scan_mode:
     st.markdown('<p class="sub-header">🔍 Scanner Low Float</p>', unsafe_allow_html=True)
@@ -178,40 +295,129 @@ elif "Low Float" in scan_mode:
     col1, col2 = st.columns(2)
     
     with col1:
-        max_public_float = st.slider("📊 Maksimal Public Float (%)", 1, 50, 20)
+        max_public_float = st.slider(
+            "📊 Maksimal Public Float (%)", 
+            1, 50, 20,
+            help="Saham dengan public float di bawah nilai ini"
+        )
     
     with col2:
-        min_volume = st.number_input("📈 Minimal Volume", min_value=0, value=0, step=100000)
+        min_volume = st.number_input(
+            "📈 Minimal Volume", 
+            min_value=0, 
+            value=0, 
+            step=100000,
+            help="Minimal volume rata-rata (0 = abaikan)"
+        )
+    
+    # Opsi mode scanning untuk low float
+    scan_option = st.radio(
+        "🔍 Mode Scanning:",
+        ["⚡ Cepat (50 saham)", "🐢 Lengkap (Semua saham)"],
+        horizontal=True,
+        index=0
+    )
     
     if st.button("🚀 SCAN LOW FLOAT", type="primary", use_container_width=True):
-        stocks_to_scan = selected_stocks if selected_stocks else STOCKS_LIST[:50]
+        # Tentukan stocks yang akan discan
+        if selected_stocks:
+            stocks_to_scan = selected_stocks
+        else:
+            if scan_option == "⚡ Cepat (50 saham)":
+                stocks_to_scan = STOCKS_LIST[:50]
+            else:
+                stocks_to_scan = STOCKS_LIST
         
-        with st.spinner("Mengumpulkan data kepemilikan saham..."):
+        with st.spinner(f"Mengumpulkan data {len(stocks_to_scan)} saham..."):
             results = scan_low_float(stocks_to_scan, max_public_float, min_volume)
             
             if results:
                 df_results = pd.DataFrame(results)
-                st.success(f"✅ Ditemukan {len(df_results)} saham Low Float!")
+                
+                st.markdown(f"""
+                <div class="success-box">
+                    ✅ **Berhasil!** Ditemukan {len(df_results)} saham Low Float
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # Tampilkan hasil
+                st.markdown("### 📋 Hasil Scanning")
+                
+                display_df = df_results[[
+                    'saham', 'public_float', 'category',
+                    'volume_avg', 'volatility', 'low_float_score'
+                ]].copy()
+                
+                display_df.columns = [
+                    'Saham', 'Public Float (%)', 'Kategori',
+                    'Volume', 'Volatilitas (%)', 'Score'
+                ]
                 
                 st.dataframe(
-                    df_results[[
-                        'saham', 'public_float', 'category',
-                        'volume_avg', 'volatility', 'low_float_score'
-                    ]],
-                    use_container_width=True
+                    display_df.style.format({
+                        'Public Float (%)': '{:.2f}%',
+                        'Volume': '{:,.0f}',
+                        'Volatilitas (%)': '{:.2f}%',
+                        'Score': '{:.1f}'
+                    }).background_gradient(subset=['Score'], cmap='RdYlGn'),
+                    use_container_width=True,
+                    height=500
                 )
                 
-                if st.button("📥 Export ke Excel"):
-                    excel_data = export_to_excel(df_results)
+                # Visualisasi
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    # Pie chart kategori
+                    category_counts = df_results['category'].value_counts()
+                    fig = px.pie(
+                        values=category_counts.values,
+                        names=category_counts.index,
+                        title="Distribusi Kategori Low Float"
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+                
+                with col2:
+                    # Scatter plot
+                    fig = px.scatter(
+                        df_results,
+                        x='public_float',
+                        y='volatility',
+                        size='volume_avg',
+                        hover_data=['saham'],
+                        color='category',
+                        title="Public Float vs Volatilitas",
+                        labels={
+                            'public_float': 'Public Float (%)',
+                            'volatility': 'Volatilitas (%)'
+                        }
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+                
+                # Export
+                if st.button("📊 Export ke Excel", use_container_width=True):
+                    excel_data = export_to_excel(display_df)
                     st.download_button(
-                        label="Download Excel",
+                        label="💾 Download Excel",
                         data=excel_data,
                         file_name=f"low_float_scanner_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        use_container_width=True
                     )
             else:
-                st.warning("⚠️ Tidak ditemukan saham low float.")
+                st.markdown("""
+                <div class="warning-box">
+                    ⚠️ Tidak ditemukan saham low float dengan kriteria tersebut.<br>
+                    Coba naikkan maksimal public float atau turunkan minimal volume.
+                </div>
+                """, unsafe_allow_html=True)
 
 # Footer
 st.markdown("---")
-st.markdown("⚠️ Disclaimer: Data untuk tujuan edukasi, bukan rekomendasi investasi.")
+st.markdown("""
+<div style='text-align: center; color: #666; font-size: 0.9rem;'>
+    <p>⚠️ <strong>Disclaimer:</strong> Data untuk tujuan edukasi, bukan rekomendasi investasi.</p>
+    <p>Selalu lakukan analisis sendiri sebelum mengambil keputusan investasi.</p>
+    <p>📊 Data dari Yahoo Finance | ⏱️ Update: Real-time</p>
+</div>
+""", unsafe_allow_html=True)
