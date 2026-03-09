@@ -58,12 +58,86 @@ st.markdown("""
         border-left: 4px solid #ffc107;
         border-radius: 0.25rem;
     }
-    .ai-box {
-        padding: 1rem;
-        background-color: #e8f4f8;
+    .ai-card-high {
+        background-color: #0a2f1f;
+        padding: 20px;
+        border-radius: 15px;
+        border-left: 8px solid #00ff88;
+        margin: 15px 0;
+        color: white;
+        box-shadow: 0 4px 8px rgba(0,255,136,0.2);
+    }
+    .ai-card-mid {
+        background-color: #2f2a0a;
+        padding: 20px;
+        border-radius: 15px;
+        border-left: 8px solid #ffaa00;
+        margin: 15px 0;
+        color: white;
+        box-shadow: 0 4px 8px rgba(255,170,0,0.2);
+    }
+    .ai-card-low {
+        background-color: #2f0a0a;
+        padding: 20px;
+        border-radius: 15px;
+        border-left: 8px solid #ff5555;
+        margin: 15px 0;
+        color: white;
+        box-shadow: 0 4px 8px rgba(255,85,85,0.2);
+    }
+    .ai-title {
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin-bottom: 15px;
+        border-bottom: 2px solid #444;
+        padding-bottom: 10px;
+    }
+    .ai-stat {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px;
+        background-color: rgba(255,255,255,0.1);
+        border-radius: 8px;
+        margin: 5px 0;
+    }
+    .ai-label {
+        color: #aaa;
+    }
+    .ai-value {
+        font-weight: bold;
+        font-size: 1.2rem;
+    }
+    .ai-value-high {
+        color: #00ff88;
+        font-weight: bold;
+        font-size: 1.2rem;
+    }
+    .ai-value-mid {
+        color: #ffaa00;
+        font-weight: bold;
+        font-size: 1.2rem;
+    }
+    .ai-conclusion {
+        margin-top: 15px;
+        padding: 15px;
+        background-color: rgba(255,255,255,0.05);
+        border-radius: 10px;
+        font-style: italic;
         border-left: 4px solid #1f77b4;
-        border-radius: 0.25rem;
-        margin: 0.5rem 0;
+    }
+    .metric-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin: 10px 0;
+    }
+    .metric-item {
+        flex: 1;
+        min-width: 120px;
+        background: rgba(255,255,255,0.05);
+        padding: 10px;
+        border-radius: 8px;
+        text-align: center;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -280,18 +354,70 @@ if "Open = Low" in scan_mode:
             fig.update_layout(height=500)
             st.plotly_chart(fig, use_container_width=True)
             
-            # ========== FITUR AI AKTIF ==========
-            st.markdown("### 🤖 Analisis AI")
+            # ========== FITUR AI DENGAN TAMPILAN KEREN ==========
+            st.markdown("## 🤖 Analisis AI")
             st.markdown("Analisis mendalam untuk top 5 saham dengan pola terbaik:")
             
-            # Buat 5 kolom atau pake expander
-            cols = st.columns(5)
             for idx, (i, row) in enumerate(df_results.head(5).iterrows()):
-                with cols[idx]:
-                    with st.container():
-                        st.markdown(f"**{row['saham']}**")
-                        analysis = analyze_pattern(row.to_dict())
-                        st.markdown(f'<div class="ai-box">{analysis}</div>', unsafe_allow_html=True)
+                # Tentukan kelas card berdasarkan probabilitas
+                if row['probabilitas'] >= 20:
+                    card_class = "ai-card-high"
+                    prob_text = "🔥 PROBABILITAS TINGGI"
+                elif row['probabilitas'] >= 10:
+                    card_class = "ai-card-mid"
+                    prob_text = "⚠️ PROBABILITAS SEDANG"
+                else:
+                    card_class = "ai-card-low"
+                    prob_text = "📌 PROBABILITAS RENDAH"
+                
+                # Panggil analisis AI
+                analysis = analyze_pattern(row.to_dict())
+                
+                # Tampilkan card keren
+                st.markdown(f"""
+                <div class="{card_class}">
+                    <div class="ai-title">
+                        📊 {row['saham']} 
+                        <span style="float: right; font-size: 1rem; background-color: rgba(255,255,255,0.2); padding: 5px 10px; border-radius: 20px;">
+                            {prob_text}
+                        </span>
+                    </div>
+                    
+                    <div class="metric-container">
+                        <div class="metric-item">
+                            <div class="ai-label">🎯 Probabilitas</div>
+                            <div class="ai-value-high">{row['probabilitas']:.1f}%</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="ai-label">💰 Rata-rata Gain</div>
+                            <div class="ai-value-mid">{row['rata_rata_kenaikan']:.1f}%</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="ai-label">📈 Max Gain</div>
+                            <div class="ai-value-high">{row['max_kenaikan']:.1f}%</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="ai-label">📊 Frekuensi</div>
+                            <div class="ai-value">{row['frekuensi']}x</div>
+                        </div>
+                    </div>
+                    
+                    <div class="ai-stat">
+                        <span class="ai-label">📅 Pattern Terakhir:</span>
+                        <span class="ai-value">{row.get('last_pattern_date', 'N/A')} (Gain: {row['last_kenaikan']:.1f}%)</span>
+                    </div>
+                    
+                    <div class="ai-stat">
+                        <span class="ai-label">📈 Trend Terkini:</span>
+                        <span class="ai-value">{row.get('recent_trend', 'Normal')}</span>
+                    </div>
+                    
+                    <div class="ai-conclusion">
+                        <strong>📋 KESIMPULAN AI:</strong><br>
+                        {analysis.replace('•', '▶').replace('\n', '<br>')}
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
             
             # Export
             st.markdown("### 📥 Export Data")
@@ -421,16 +547,51 @@ elif "Low Float" in scan_mode:
                     st.plotly_chart(fig, use_container_width=True)
                 
                 # ========== FITUR AI UNTUK LOW FLOAT ==========
-                st.markdown("### 🤖 Analisis AI")
+                st.markdown("## 🤖 Analisis Low Float")
                 st.markdown("Analisis untuk saham Low Float terbaik:")
                 
-                cols = st.columns(3)
                 for idx, (i, row) in enumerate(df_results.head(3).iterrows()):
-                    with cols[idx]:
-                        with st.container():
-                            st.markdown(f"**{row['saham']}**")
-                            analysis = analyze_low_float(row.to_dict())
-                            st.markdown(f'<div class="ai-box">{analysis}</div>', unsafe_allow_html=True)
+                    # Tentukan kelas card berdasarkan kategori
+                    if 'Ultra' in row['category']:
+                        card_class = "ai-card-high"
+                    elif 'Very' in row['category']:
+                        card_class = "ai-card-mid"
+                    else:
+                        card_class = "ai-card-low"
+                    
+                    # Panggil analisis AI
+                    analysis = analyze_low_float(row.to_dict())
+                    
+                    st.markdown(f"""
+                    <div class="{card_class}">
+                        <div class="ai-title">
+                            🔥 {row['saham']} - {row['category']}
+                            <span style="float: right; font-size: 1rem; background-color: rgba(255,255,255,0.2); padding: 5px 10px; border-radius: 20px;">
+                                Score: {row['low_float_score']:.1f}
+                            </span>
+                        </div>
+                        
+                        <div class="metric-container">
+                            <div class="metric-item">
+                                <div class="ai-label">📊 Public Float</div>
+                                <div class="ai-value-high">{row['public_float']:.2f}%</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="ai-label">📈 Volatilitas</div>
+                                <div class="ai-value-mid">{row['volatility']:.2f}%</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="ai-label">📊 Volume</div>
+                                <div class="ai-value">{row['volume_avg']:,.0f}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="ai-conclusion">
+                            <strong>📋 KESIMPULAN AI:</strong><br>
+                            {analysis.replace('•', '▶').replace('\n', '<br>')}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
                 
                 # Export
                 if st.button("📊 Export ke Excel", use_container_width=True):
