@@ -1,7 +1,8 @@
 streamlit
 pandas
+plotly
 yfinance
 openpyxl
-plotly
-numpy
+xlsxwriter
 requests
+beautifulsoup4
