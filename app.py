@@ -232,10 +232,91 @@ if "Open = Low" in scan_mode:
             df_results = df_results.sort_values('frekuensi', ascending=False).head(limit_saham)
             
             # Success message
+                        # Success message - VERSI ELEGAN
             st.markdown(f"""
-            <div class="success-box">
-                ✅ **Berhasil!** Ditemukan {len(df_results)} saham dengan pola Open=Low<br>
-                ⏱️ Waktu proses: {total_time:.0f} detik
+            <div style="
+                background: linear-gradient(135deg, #667eea, #764ba2);
+                padding: 30px;
+                border-radius: 20px;
+                margin: 25px 0 35px 0;
+                text-align: center;
+                color: white;
+                border: 2px solid #ffd700;
+                box-shadow: 0 20px 40px rgba(102,126,234,0.4);
+                position: relative;
+                overflow: hidden;
+            ">
+                <!-- Efek bintang kecil -->
+                <div style="position: absolute; top: 10px; right: 20px; font-size: 1.5rem; opacity: 0.3;">✨</div>
+                <div style="position: absolute; bottom: 10px; left: 20px; font-size: 1.5rem; opacity: 0.3;">✨</div>
+                
+                <h1 style="
+                    color: #ffd700; 
+                    margin: 0; 
+                    font-size: 3rem; 
+                    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+                    letter-spacing: 2px;
+                ">
+                    ✅ SCAN BERHASIL!
+                </h1>
+                
+                <div style="
+                    background: rgba(255,255,255,0.15);
+                    padding: 20px;
+                    border-radius: 15px;
+                    margin: 20px 0 10px 0;
+                    backdrop-filter: blur(5px);
+                ">
+                    <p style="
+                        color: white; 
+                        font-size: 2.2rem; 
+                        margin: 0;
+                        font-weight: bold;
+                        text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+                    ">
+                        {len(df_results)} SAHAM
+                    </p>
+                    <p style="
+                        color: #ffd700; 
+                        font-size: 1.3rem; 
+                        margin: 5px 0 0 0;
+                        text-transform: uppercase;
+                        letter-spacing: 3px;
+                    ">
+                        Dengan Pola Open=Low
+                    </p>
+                </div>
+                
+                <div style="
+                    display: flex;
+                    justify-content: center;
+                    gap: 30px;
+                    margin-top: 15px;
+                ">
+                    <div style="text-align: center;">
+                        <p style="color: #ffd700; font-size: 1rem; margin: 0;">⏱️ WAKTU PROSES</p>
+                        <p style="color: white; font-size: 1.8rem; margin: 5px 0; font-weight: bold;">
+                            {total_time:.0f} detik
+                        </p>
+                    </div>
+                    <div style="text-align: center;">
+                        <p style="color: #ffd700; font-size: 1rem; margin: 0;">📊 PERIODE</p>
+                        <p style="color: white; font-size: 1.8rem; margin: 5px 0; font-weight: bold;">
+                            {periode}
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Garis dekoratif -->
+                <div style="
+                    width: 80%;
+                    height: 2px;
+                    background: linear-gradient(90deg, transparent, #ffd700, transparent);
+                    margin: 15px auto 5px auto;
+                "></div>
+                <p style="color: rgba(255,255,255,0.7); font-size: 0.9rem; margin: 10px 0 0 0;">
+                    ✦ Siap trading cuan ✦
+                </p>
             </div>
             """, unsafe_allow_html=True)
             
