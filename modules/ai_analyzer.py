@@ -2,6 +2,9 @@ import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
 
+# HAPUS baris import yang salah
+# from modules.data_fetcher import get_news_sentiment  # <-- Ini juga gak dipakai
+
 class StockAnalyzer:
     """Class untuk analisis AI sederhana"""
     
@@ -10,9 +13,7 @@ class StockAnalyzer:
         self.insights = {}
     
     def analyze_pattern(self, stock_data):
-        """
-        Analisis pattern untuk satu saham
-        """
+        """Analisis pattern untuk satu saham"""
         if not stock_data:
             return "Data tidak cukup untuk analisis"
         
@@ -20,19 +21,21 @@ class StockAnalyzer:
         prob = stock_data.get('probabilitas', 0)
         avg_gain = stock_data.get('rata_rata_kenaikan', 0)
         freq = stock_data.get('frekuensi', 0)
+        last_gain = stock_data.get('last_kenaikan', 0)
         
         analysis = []
-        analysis.append(f"📊 Analisis untuk {saham}:")
+        analysis.append(f"📊 **Analisis untuk {saham}:**")
         analysis.append(f"• Probabilitas pattern: {prob:.1f}%")
         analysis.append(f"• Rata-rata kenaikan: {avg_gain:.1f}%")
         analysis.append(f"• Frekuensi kejadian: {freq}x")
+        analysis.append(f"• Kenaikan terakhir: {last_gain:.1f}%")
         
         if prob >= 20:
-            analysis.append("✅ Potensi tinggi untuk pattern Open=Low")
+            analysis.append("\n✅ **Kesimpulan:** Potensi TINGGI untuk pattern Open=Low")
         elif prob >= 10:
-            analysis.append("⚠️ Potensi sedang untuk pattern Open=Low") 
+            analysis.append("\n⚠️ **Kesimpulan:** Potensi SEDANG untuk pattern Open=Low") 
         else:
-            analysis.append("📌 Potensi rendah untuk pattern Open=Low")
+            analysis.append("\n📌 **Kesimpulan:** Potensi RENDAH untuk pattern Open=Low")
         
         return "\n".join(analysis)
     
@@ -45,18 +48,24 @@ class StockAnalyzer:
         public_float = stock_data.get('public_float', 0)
         category = stock_data.get('category', 'Normal')
         volatility = stock_data.get('volatility', 0)
+        volume = stock_data.get('volume_avg', 0)
+        score = stock_data.get('low_float_score', 0)
         
         analysis = []
-        analysis.append(f"📊 Analisis Low Float {saham}:")
+        analysis.append(f"📊 **Analisis Low Float {saham}:**")
         analysis.append(f"• Public Float: {public_float:.1f}% ({category})")
         analysis.append(f"• Volatilitas: {volatility:.1f}%")
+        analysis.append(f"• Volume rata-rata: {volume:,.0f}")
+        analysis.append(f"• Score: {score:.1f}/100")
         
-        if public_float < 10:
-            analysis.append("🔥 Sangat rendah - potensi pergerakan besar")
-        elif public_float < 20:
-            analysis.append("⚡ Rendah - cukup volatil")
+        if public_float < 5:
+            analysis.append("\n🔥 **Ultra Low Float** - Sangat langka, potensi pergerakan ekstrem!")
+        elif public_float < 10:
+            analysis.append("\n⚡ **Very Low Float** - Pergerakan bisa sangat volatil.")
+        elif public_float < 15:
+            analysis.append("\n📊 **Low Float** - Cukup likuid dengan potensi pergerakan besar.")
         else:
-            analysis.append("📊 Normal - pergerakan stabil")
+            analysis.append("\n📈 **Normal Float** - Lebih stabil, pergerakan lebih moderat.")
         
         return "\n".join(analysis)
     
@@ -66,12 +75,11 @@ class StockAnalyzer:
     
     def get_market_context(self, stock_code):
         """Mendapatkan konteks pasar untuk saham"""
-        return "📰 Sentimen pasar: Netral"
-
-# Singleton instance
-analyzer = StockAnalyzer()
+        return "📰 **Konteks Pasar:**\n• Sentimen: Netral\n• Tidak ada berita signifikan"
 
 # Fungsi helper
+analyzer = StockAnalyzer()
+
 def analyze_pattern(stock_data):
     return analyzer.analyze_pattern(stock_data)
 
