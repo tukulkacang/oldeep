@@ -293,7 +293,9 @@ def display_shareholder_info(stock_code):
     # Pemegang >1%
     if data.get('pemegang'):
         html += "<p style='color: #aaa; margin: 10px 0 5px 0;'>Pemegang >1% (update Feb 2026):</p>"
+        total_pemegang = 0
         for p in data['pemegang']:
+            total_pemegang += p['persen']
             warna_tipe = {
                 'Founder': '#ffaa00',
                 'Institusi': '#1f77b4',
@@ -306,6 +308,15 @@ def display_shareholder_info(stock_code):
                 <span style='color: #ffd700; font-weight: bold;'>{p['persen']:.2f}%</span>
             </div>
             """
+        
+        # Sisa free float
+        sisa_free_float = 100 - total_pemegang
+        html += f"""
+        <div style='display: flex; justify-content: space-between; background-color: #2d2d2d; padding: 8px; border-radius: 5px; margin: 5px 0; border-left: 3px solid #00ff88;'>
+            <span><span style='color: #00ff88;'>■</span> Sisa Free Float (tersebar publik)</span>
+            <span style='color: #00ff88; font-weight: bold;'>{sisa_free_float:.2f}%</span>
+        </div>
+        """
     
     # Insider activity
     if data.get('insider_activity'):
@@ -869,15 +880,18 @@ elif "Low Float" in scan_mode:
                     
                     # Hitung total kepemilikan >1%
                     total_pemegang_utama = sum([p['persen'] for p in shareholder_info.get('pemegang', [])])
+                    free_float_asli = shareholder_info.get('free_float', 100)
+                    sisa_free_float = 100 - total_pemegang_utama if total_pemegang_utama > 0 else 100
                     
                     enriched_results.append({
                         'Saham': saham,
-                        'Public Float (%)': f"{row['public_float']:.2f}%",
+                        'Free Float (%)': f"{free_float_asli:.2f}%",
                         'Kategori': row['category'],
                         'Volume': f"{row['volume_avg']:,.0f}",
                         'Volatilitas (%)': f"{row['volatility']:.2f}%",
                         'Score': f"{row['low_float_score']:.1f}",
                         'Pemegang >1%': f"{total_pemegang_utama:.2f}%" if total_pemegang_utama > 0 else "Tidak ada",
+                        'Sisa Free Float': f"{sisa_free_float:.2f}%" if total_pemegang_utama > 0 else "100%",
                         'Potensi Goreng': goreng['level']
                     })
                 
