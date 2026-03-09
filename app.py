@@ -171,7 +171,7 @@ if "Open = Low" in scan_mode:
                 stocks_to_scan = STOCKS_LIST
         
         # Hitung estimasi waktu
-        estimasi_detik = len(stocks_to_scan) * 0.5  # 0.5 detik per saham
+        estimasi_detik = len(stocks_to_scan) * 0.5
         estimasi_menit = estimasi_detik / 60
         
         # Tampilkan warning
@@ -211,7 +211,7 @@ if "Open = Low" in scan_mode:
             
             # Update progress
             progress_bar.progress((i + 1) / len(stocks_to_scan))
-            time.sleep(0.3)  # Hindari rate limit
+            time.sleep(0.3)
         
         # Selesai
         progress_bar.empty()
@@ -245,13 +245,15 @@ if "Open = Low" in scan_mode:
                 'Rata-rata Gain (%)', 'Max Gain (%)', 'Gain Terakhir (%)'
             ]
             
+            # Format dulu sebelum ditampilkan
+            display_df_display = display_df.copy()
+            display_df_display['Probabilitas (%)'] = display_df_display['Probabilitas (%)'].apply(lambda x: f"{x:.1f}%")
+            display_df_display['Rata-rata Gain (%)'] = display_df_display['Rata-rata Gain (%)'].apply(lambda x: f"{x:.1f}%")
+            display_df_display['Max Gain (%)'] = display_df_display['Max Gain (%)'].apply(lambda x: f"{x:.1f}%")
+            display_df_display['Gain Terakhir (%)'] = display_df_display['Gain Terakhir (%)'].apply(lambda x: f"{x:.1f}%")
+            
             st.dataframe(
-                display_df.style.format({
-                    'Probabilitas (%)': '{:.1f}%',
-                    'Rata-rata Gain (%)': '{:.1f}%',
-                    'Max Gain (%)': '{:.1f}%',
-                    'Gain Terakhir (%)': '{:.1f}%'
-                }).background_gradient(subset=['Probabilitas (%)'], cmap='YlOrRd'),
+                display_df_display,
                 use_container_width=True,
                 height=500
             )
@@ -353,13 +355,15 @@ elif "Low Float" in scan_mode:
                     'Volume', 'Volatilitas (%)', 'Score'
                 ]
                 
+                # Format untuk tampilan
+                display_df_display = display_df.copy()
+                display_df_display['Public Float (%)'] = display_df_display['Public Float (%)'].apply(lambda x: f"{x:.2f}%")
+                display_df_display['Volume'] = display_df_display['Volume'].apply(lambda x: f"{x:,.0f}")
+                display_df_display['Volatilitas (%)'] = display_df_display['Volatilitas (%)'].apply(lambda x: f"{x:.2f}%")
+                display_df_display['Score'] = display_df_display['Score'].apply(lambda x: f"{x:.1f}")
+                
                 st.dataframe(
-                    display_df.style.format({
-                        'Public Float (%)': '{:.2f}%',
-                        'Volume': '{:,.0f}',
-                        'Volatilitas (%)': '{:.2f}%',
-                        'Score': '{:.1f}'
-                    }).background_gradient(subset=['Score'], cmap='RdYlGn'),
+                    display_df_display,
                     use_container_width=True,
                     height=500
                 )
