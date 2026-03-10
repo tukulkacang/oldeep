@@ -490,7 +490,7 @@ def reset_session_data():
 
 # Config halaman
 st.set_page_config(
-    page_title="Screener Saham Indonesia",
+    page_title="RADAR AKSARA",
     page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -551,7 +551,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Title
-st.markdown('<p class="main-header">📊 Screener Saham Indonesia</p>', unsafe_allow_html=True)
+st.markdown('<p class="main-header">📊 RADAR AKSARA</p>', unsafe_allow_html=True)
 st.markdown('<p class="info-text">Scanner Open=Low & Low Float dengan Filter Blue Chip, Second Liner, Third Liner</p>', unsafe_allow_html=True)
 
 # Sidebar
