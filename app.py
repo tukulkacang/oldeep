@@ -5,29 +5,15 @@ from plotly.subplots import make_subplots
 from datetime import datetime, timedelta
 import time
 import sqlite3
-import hashlib
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import yfinance as yf
-import requests
-from dotenv import load_dotenv
-import os
-import json
-from functools import lru_cache
 import warnings
 warnings.filterwarnings('ignore')
-
-# Load environment variables
-load_dotenv()
-
-# ─── CONFIGURATION ───────────────────────────────────────────
-TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '')
-TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID', '')
-DATABASE_PATH = 'radar_aksara.db'
 
 # ─── DATABASE SETUP ──────────────────────────────────────────
 def init_database():
     """Inisialisasi database SQLite"""
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = sqlite3.connect('radar_aksara.db')
     c = conn.cursor()
     
     # Tabel untuk historical data
@@ -40,29 +26,13 @@ def init_database():
                  (saham TEXT, market_cap REAL, pe_ratio REAL, 
                   pb_ratio REAL, volume_avg REAL, last_update DATE)''')
     
-    # Tabel untuk free float & shareholders
-    c.execute('''CREATE TABLE IF NOT EXISTS shareholders
-                 (saham TEXT, nama TEXT, persen REAL, tipe TEXT,
-                  tanggal_update DATE)''')
-    
-    # Tabel untuk insider trading
-    c.execute('''CREATE TABLE IF NOT EXISTS insider_trades
-                 (saham TEXT, tanggal DATE, insider TEXT,
-                  aksi TEXT, jumlah INTEGER, harga REAL)''')
-    
-    # Tabel untuk hasil scan (caching)
-    c.execute('''CREATE TABLE IF NOT EXISTS scan_results
-                 (scan_id TEXT, saham TEXT, pattern_type TEXT,
-                  frekuensi INTEGER, probabilitas REAL,
-                  avg_gain REAL, max_gain REAL, scan_date DATE)''')
-    
     conn.commit()
     conn.close()
 
 # Panggil init database
 init_database()
 
-# ─── DATA FETCHER (REAL IMPLEMENTATION) ─────────────────────
+# ─── DATA FETCHER ─────────────────────────────────────
 class DataFetcher:
     """Kelas untuk mengambil data saham real-time"""
     
@@ -78,7 +48,7 @@ class DataFetcher:
                 return None
                 
             # Simpan ke database
-            conn = sqlite3.connect(DATABASE_PATH)
+            conn = sqlite3.connect('radar_aksara.db')
             for idx, row in df.iterrows():
                 conn.execute('''INSERT OR REPLACE INTO stock_prices 
                               VALUES (?, ?, ?, ?, ?, ?, ?)''',
@@ -89,7 +59,6 @@ class DataFetcher:
             
             return df
         except Exception as e:
-            st.error(f"Error fetching {symbol}: {str(e)}")
             return None
     
     @staticmethod
@@ -113,19 +82,6 @@ class DataFetcher:
             ticker = yf.Ticker(f"{symbol}.JK")
             info = ticker.info
             
-            # Simpan ke database
-            conn = sqlite3.connect(DATABASE_PATH)
-            conn.execute('''INSERT OR REPLACE INTO fundamental_data
-                          VALUES (?, ?, ?, ?, ?, ?)''',
-                       (symbol, 
-                        info.get('marketCap', 0),
-                        info.get('trailingPE', 0),
-                        info.get('priceToBook', 0),
-                        info.get('averageVolume', 0),
-                        datetime.now().date()))
-            conn.commit()
-            conn.close()
-            
             return {
                 'market_cap': info.get('marketCap', 0),
                 'pe_ratio': info.get('trailingPE', 0),
@@ -141,8 +97,27 @@ class DataFetcher:
                 'volume_avg': 0,
                 'sector': 'Unknown'
             }
+    
+    @staticmethod
+    def get_free_float(symbol):
+        """Estimasi free float dari market cap dan volume"""
+        try:
+            data = DataFetcher.get_fundamental_data(symbol)
+            market_cap = data.get('market_cap', 0)
+            
+            # Logic sederhana: free float berdasarkan market cap
+            if market_cap > 50e12:  # >50T
+                return 80.0
+            elif market_cap > 10e12:  # 10-50T
+                return 70.0
+            elif market_cap > 1e12:  # 1-10T
+                return 50.0
+            else:
+                return 30.0
+        except:
+            return 50.0
 
-# ─── PATTERN SCANNER (OPTIMIZED) ────────────────────────────
+# ─── PATTERN SCANNER ────────────────────────────────
 class PatternScanner:
     """Scanner untuk berbagai pola saham"""
     
@@ -195,13 +170,15 @@ class PatternScanner:
                     if data is not None and len(data) > 5:
                         volatility = ((data['High'].max() - data['Low'].min()) / data['Low'].min()) * 100
                         volume_avg = data['Volume'].mean()
+                        current_price = DataFetcher.get_current_price(symbol)
                         
                         if volume_avg >= min_volume:
                             return {
                                 'saham': symbol,
-                                'free_float': ff,
-                                'volatility': volatility,
-                                'volume_avg': volume_avg,
+                                'free_float': round(ff, 1),
+                                'volatility': round(volatility, 1),
+                                'volume_avg': int(volume_avg),
+                                'current_price': round(current_price, 0),
                                 'category': PatternScanner.get_ff_category(ff)
                             }
             except:
@@ -220,21 +197,22 @@ class PatternScanner:
     
     @staticmethod
     def get_ff_category(ff):
-        if ff < 10: return "Ultra Low Float"
-        if ff < 15: return "Very Low Float"
-        if ff < 25: return "Low Float"
-        if ff < 40: return "Moderate Low Float"
-        return "Normal Float"
+        if ff < 10: return "🔥 Ultra Low"
+        if ff < 15: return "⚡ Super Low"
+        if ff < 25: return "💪 Low"
+        if ff < 40: return "📊 Moderate"
+        return "📈 Normal"
 
-# ─── AI ANALYZER (WITH REAL AI) ─────────────────────────────
+# ─── AI ANALYZER ────────────────────────────────────
 class AIAnalyzer:
-    """AI-powered analysis menggunakan rule-based + API"""
+    """AI-powered analysis menggunakan rule-based"""
     
     @staticmethod
     def analyze_pattern(stock_data):
         """Generate analysis based on pattern data"""
         score = 0
         reasons = []
+        warnings_list = []
         
         # Rule-based scoring
         if stock_data['probabilitas'] >= 70:
@@ -246,6 +224,8 @@ class AIAnalyzer:
         elif stock_data['probabilitas'] >= 30:
             score += 1
             reasons.append("⚠️ Probabilitas sedang (30-50%)")
+        else:
+            warnings_list.append("⚠️ Probabilitas rendah (<30%)")
         
         if stock_data['rata_rata_kenaikan'] >= 10:
             score += 3
@@ -253,156 +233,80 @@ class AIAnalyzer:
         elif stock_data['rata_rata_kenaikan'] >= 5:
             score += 2
             reasons.append("💵 Rata-rata gain 5-10%")
+        else:
+            warnings_list.append("📉 Rata-rata gain kecil (<5%)")
         
         if stock_data['frekuensi'] >= 10:
             score += 2
             reasons.append("📊 Pola sering muncul (>10x)")
+        elif stock_data['frekuensi'] < 3:
+            warnings_list.append("🔍 Pola jarang muncul")
         
         # Generate recommendation
         if score >= 6:
             recommendation = "🚀 **STRONG BUY**"
-            risk = "Rendah"
+            bg_color = "#d4edda"
+            text_color = "#155724"
         elif score >= 4:
             recommendation = "📈 **BUY**"
-            risk = "Sedang"
+            bg_color = "#fff3cd"
+            text_color = "#856404"
         elif score >= 2:
             recommendation = "👀 **WATCH**"
-            risk = "Tinggi"
+            bg_color = "#cce5ff"
+            text_color = "#004085"
         else:
             recommendation = "⏸️ **HOLD/AVOID**"
-            risk = "Sangat Tinggi"
+            bg_color = "#f8d7da"
+            text_color = "#721c24"
+        
+        # Current price
+        current_price = DataFetcher.get_current_price(stock_data['saham'])
         
         analysis = f"""
-        ### {recommendation}
-        
-        **Risk Level:** {risk}
-        
-        **Key Points:**
-        {chr(10).join(reasons)}
-        
-        **Insight:** 
-        Saham {stock_data['saham']} menunjukkan pola Open=Low sebanyak {stock_data['frekuensi']}x 
-        dengan probabilitas keberhasilan {stock_data['probabilitas']:.1f}% dan rata-rata gain 
-        {stock_data['rata_rata_kenaikan']:.1f}%. 
-        
-        **Strategy:** 
-        - Entry: Harga mendekati low hari ini
-        - Target: {stock_data['rata_rata_kenaikan']:.1f}% dari entry
-        - Stop Loss: -3% dari entry
+        <div style="background-color: {bg_color}; color: {text_color}; padding: 15px; border-radius: 10px; margin: 10px 0;">
+            <h3 style="margin-top: 0;">{recommendation}</h3>
+            <p><strong>Harga Saat Ini:</strong> Rp {current_price:,.0f}</p>
+            
+            <h4>📊 Key Points:</h4>
+            <ul>
+                {"".join([f"<li>{r}</li>" for r in reasons])}
+            </ul>
+            
+            <h4>⚠️ Warnings:</h4>
+            <ul>
+                {"".join([f"<li>{w}</li>" for w in warnings_list]) if warnings_list else "<li>Tidak ada warning signifikan</li>"}
+            </ul>
+            
+            <h4>💡 Insight:</h4>
+            <p>Saham <b>{stock_data['saham']}</b> menunjukkan pola Open=Low sebanyak <b>{stock_data['frekuensi']}</b>x 
+            dengan probabilitas keberhasilan <b>{stock_data['probabilitas']:.1f}%</b> dan rata-rata gain 
+            <b>{stock_data['rata_rata_kenaikan']:.1f}%</b>.</p>
+            
+            <h4>🎯 Trading Strategy:</h4>
+            <ul>
+                <li><b>Entry:</b> Harga mendekati low hari ini</li>
+                <li><b>Target 1:</b> {stock_data['rata_rata_kenaikan']:.1f}% ({current_price * (1 + stock_data['rata_rata_kenaikan']/100):,.0f})</li>
+                <li><b>Target 2:</b> {stock_data['rata_rata_kenaikan']*1.5:.1f}% ({current_price * (1 + stock_data['rata_rata_kenaikan']*1.5/100):,.0f})</li>
+                <li><b>Stop Loss:</b> -3% dari entry</li>
+            </ul>
+        </div>
         """
         
         return analysis
-    
-    @staticmethod
-    def predict_next_target(stock_data):
-        """Prediksi target harga berikutnya"""
-        base_price = DataFetcher.get_current_price(stock_data['saham'])
-        if base_price == 0:
-            return "Harga tidak tersedia"
-        
-        avg_gain = stock_data.get('rata_rata_kenaikan', 5)
-        prob = stock_data.get('probabilitas', 50)
-        
-        target1 = base_price * (1 + avg_gain/100)
-        target2 = base_price * (1 + avg_gain*1.5/100)
-        target3 = base_price * (1 + avg_gain*2/100)
-        
-        return f"""
-        **Target Harga:**
-        - Target 1 ({avg_gain:.1f}%): Rp {target1:,.0f}
-        - Target 2 ({avg_gain*1.5:.1f}%): Rp {target2:,.0f}
-        - Target 3 ({avg_gain*2:.1f}%): Rp {target3:,.0f}
-        
-        Probabilitas mencapai target: {prob:.1f}%
-        """
 
-# ─── NOTIFICATION SYSTEM ────────────────────────────────────
-class NotificationSystem:
-    """Telegram notifications for alerts"""
-    
-    @staticmethod
-    def send_telegram_message(message):
-        if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
-            return False
-        
-        try:
-            url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-            payload = {
-                'chat_id': TELEGRAM_CHAT_ID,
-                'text': message,
-                'parse_mode': 'HTML'
-            }
-            requests.post(url, json=payload, timeout=5)
-            return True
-        except:
-            return False
-    
-    @staticmethod
-    def create_alert_message(stock, pattern_type, data):
-        message = f"""
-🚨 <b>ALERT: {stock}</b>
-
-Pattern: {pattern_type}
-Price: Rp {DataFetcher.get_current_price(stock):,.0f}
-Probability: {data.get('probabilitas', 0):.1f}%
-Target Gain: {data.get('rata_rata_kenaikan', 0):.1f}%
-
-#IDX #Trading #Alert
-        """
-        return message
-
-# ─── BACKTESTING ENGINE ─────────────────────────────────────
-class BacktestEngine:
-    """Backtesting untuk validasi strategi"""
-    
-    @staticmethod
-    def backtest_pattern(symbol, pattern_type="open_low", days=365):
-        """Backtest pola Open=Low"""
-        df = DataFetcher.get_stock_data(symbol, period=f"{days}d")
-        if df is None or len(df) < 30:
-            return None
-        
-        trades = []
-        for i in range(20, len(df)-5):
-            # Deteksi pola
-            if abs(df['Open'].iloc[i] - df['Low'].iloc[i]) / df['Low'].iloc[i] < 0.005:
-                entry_price = df['Close'].iloc[i]
-                exit_price = df['Close'].iloc[i+5]
-                
-                profit = (exit_price - entry_price) / entry_price * 100
-                trades.append({
-                    'entry_date': df.index[i],
-                    'exit_date': df.index[i+5],
-                    'entry_price': entry_price,
-                    'exit_price': exit_price,
-                    'profit': profit
-                })
-        
-        if trades:
-            df_trades = pd.DataFrame(trades)
-            return {
-                'total_trades': len(trades),
-                'win_rate': (len(df_trades[df_trades['profit'] > 0]) / len(trades)) * 100,
-                'avg_profit': df_trades['profit'].mean(),
-                'max_profit': df_trades['profit'].max(),
-                'max_loss': df_trades['profit'].min(),
-                'profit_factor': abs(df_trades[df_trades['profit'] > 0]['profit'].sum() / 
-                                   df_trades[df_trades['profit'] < 0]['profit'].sum()) if len(df_trades[df_trades['profit'] < 0]) > 0 else float('inf')
-            }
-        return None
-
-# ─── STOCKS LIST (DYNAMIC) ──────────────────────────────────
+# ─── STOCKS LIST ────────────────────────────────────
 class StocksList:
-    """Dynamic stock list dari database atau API"""
+    """Dynamic stock list"""
     
     @staticmethod
     def get_all_stocks():
         """Ambil semua saham dari database atau default list"""
         try:
             # Coba ambil dari database dulu
-            conn = sqlite3.connect(DATABASE_PATH)
+            conn = sqlite3.connect('radar_aksara.db')
             c = conn.cursor()
-            c.execute("SELECT DISTINCT saham FROM stock_prices")
+            c.execute("SELECT DISTINCT saham FROM stock_prices LIMIT 100")
             rows = c.fetchall()
             conn.close()
             
@@ -411,78 +315,33 @@ class StocksList:
         except:
             pass
         
-        # Default stocks jika database kosong
+        # Default stocks IDX
         return [
             "BBCA", "BBRI", "BMRI", "BBNI", "TLKM", "ASII", "UNVR",
             "ICBP", "INDF", "KLBF", "GGRM", "HMSP", "ADRO", "BYAN",
             "PTBA", "CPIN", "JPFA", "SMGR", "INTP", "PGAS", "ANTM",
-            "INCO", "MDKA", "HRUM", "BRPT", "TPIA", "WIKA", "PTPP"
+            "INCO", "MDKA", "HRUM", "BRPT", "TPIA", "WIKA", "PTPP",
+            "AKRA", "EXCL", "ISAT", "TOWR", "MTEL", "SIDO", "UNTR",
+            "ITMG", "MEDC", "ELSA", "BRMS"
         ]
     
     @staticmethod
-    def get_sector(stock):
-        """Ambil sektor saham"""
-        try:
+    def get_stocks_by_sector(sector):
+        """Filter saham berdasarkan sektor"""
+        all_stocks = StocksList.get_all_stocks()
+        filtered = []
+        
+        for stock in all_stocks[:20]:  # Limit untuk performa
             data = DataFetcher.get_fundamental_data(stock)
-            return data.get('sector', 'Unknown')
-        except:
-            return 'Unknown'
+            if data.get('sector') == sector:
+                filtered.append(stock)
+        
+        return filtered if filtered else all_stocks[:20]
 
-# ─── ENHANCED UI COMPONENTS ─────────────────────────────────
-class UIComponents:
-    """Komponen UI yang reusable"""
-    
-    @staticmethod
-    def metric_card(title, value, delta=None, help_text=None):
-        """Enhanced metric card"""
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            st.metric(title, value, delta, help=help_text)
-    
-    @staticmethod
-    def backtest_results_card(results):
-        """Tampilkan hasil backtest"""
-        if not results:
-            return
-        
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("Total Trades", results['total_trades'])
-        with col2:
-            st.metric("Win Rate", f"{results['win_rate']:.1f}%")
-        with col3:
-            st.metric("Avg Profit", f"{results['avg_profit']:.1f}%")
-        with col4:
-            st.metric("Profit Factor", f"{results['profit_factor']:.2f}")
-    
-    @staticmethod
-    def comparison_chart(stocks_data):
-        """Chart untuk perbandingan multiple stocks"""
-        fig = go.Figure()
-        
-        for stock, data in stocks_data.items():
-            if data is not None and not data.empty:
-                fig.add_trace(go.Scatter(
-                    x=data.index,
-                    y=data['Close'],
-                    name=stock,
-                    mode='lines'
-                ))
-        
-        fig.update_layout(
-            title="Stock Price Comparison",
-            xaxis_title="Date",
-            yaxis_title="Price",
-            template="plotly_dark",
-            height=500
-        )
-        
-        return fig
-
-# ─── MAIN APP (OPTIMIZED) ───────────────────────────────────
+# ─── MAIN APP ───────────────────────────────────────
 def main():
     st.set_page_config(
-        page_title="Radar Aksara Pro",
+        page_title="Radar Aksara",
         page_icon="📊",
         layout="wide",
         initial_sidebar_state="expanded"
@@ -492,26 +351,33 @@ def main():
     st.markdown("""
     <style>
     .main-header {
-        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         padding: 20px;
-        border-radius: 10px;
+        border-radius: 15px;
         color: white;
         text-align: center;
         margin-bottom: 30px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
-    .success-box {
-        background-color: #d4edda;
-        color: #155724;
-        padding: 10px;
-        border-radius: 5px;
-        margin: 10px 0;
+    .metric-card {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        padding: 15px;
+        border-radius: 10px;
+        text-align: center;
+        margin: 5px;
     }
-    .warning-box {
-        background-color: #fff3cd;
-        color: #856404;
-        padding: 10px;
-        border-radius: 5px;
-        margin: 10px 0;
+    .stButton > button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        font-weight: bold;
+        border: none;
+        padding: 10px 24px;
+        border-radius: 25px;
+        transition: all 0.3s;
+    }
+    .stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
     }
     </style>
     """, unsafe_allow_html=True)
@@ -519,413 +385,456 @@ def main():
     # Header
     st.markdown("""
     <div class="main-header">
-        <h1>📊 RADAR AKSARA PRO</h1>
-        <p>IDX Stock Screener dengan AI Analytics & Real-time Data</p>
+        <h1>📊 RADAR AKSARA</h1>
+        <p>IDX Stock Screener dengan Analisis Real-time</p>
+        <p style="font-size: 14px; opacity: 0.9;">📈 Open=Low Scanner | 🔍 Low Float Scanner | 🤖 AI Analysis</p>
     </div>
     """, unsafe_allow_html=True)
     
     # Sidebar
     with st.sidebar:
-        st.image("https://img.icons8.com/color/96/000000/stocks.png", width=80)
-        st.title("Control Panel")
+        st.image("https://img.icons8.com/color/96/000000/stocks.png", width=100)
+        st.markdown("## 🎯 Control Panel")
         
         # Mode selection
         mode = st.radio(
             "Pilih Mode Scanner",
-            ["📈 Open = Low Scanner", "🔍 Low Float Scanner", "📊 Backtesting", "⚙️ Settings"]
+            ["📈 Open = Low Scanner", "🔍 Low Float Scanner", "📊 Dashboard"]
         )
         
         st.markdown("---")
         
         # Filter options
-        st.subheader("Filter Saham")
+        st.markdown("### 🔎 Filter Saham")
         
         filter_type = st.selectbox(
             "Jenis Filter",
-            ["Semua Saham", "By Sektor", "By Kapitalisasi"]
+            ["Semua Saham", "By Sektor"]
         )
         
+        selected_sectors = []
         if filter_type == "By Sektor":
-            sectors = ["Finance", "Consumer", "Mining", "Property", "Technology", "Infrastructure"]
+            sectors = ["Finance", "Consumer", "Energy", "Technology", "Infrastructure", "Mining"]
             selected_sectors = st.multiselect("Pilih Sektor", sectors, default=["Finance"])
-        elif filter_type == "By Kapitalisasi":
-            caps = ["Big Cap (>10T)", "Mid Cap (1T-10T)", "Small Cap (<1T)"]
-            selected_caps = st.multiselect("Pilih Kapitalisasi", caps, default=["Big Cap"])
         
         st.markdown("---")
         
-        # Notification settings
-        st.subheader("Notifikasi")
-        enable_notifications = st.checkbox("Aktifkan Telegram Notifikasi")
-        if enable_notifications:
-            if not TELEGRAM_BOT_TOKEN:
-                st.warning("Telegram token belum di-set di .env file")
+        # Info
+        st.markdown("### ℹ️ Info")
+        st.info("""
+        **Cara Penggunaan:**
+        1. Pilih mode scanner
+        2. Atur parameter
+        3. Klik tombol START
+        4. Lihat hasil analisis
+        """)
         
-        # Auto-refresh
-        st.subheader("Auto Refresh")
-        auto_refresh = st.checkbox("Auto refresh setiap 5 menit")
-        if auto_refresh:
-            st.info("Aktif: Data akan di-refresh otomatis")
-            time.sleep(300)  # 5 minutes
-            st.experimental_rerun()
+        st.markdown("---")
+        st.caption("© 2024 Radar Aksara • Data dari Yahoo Finance")
     
     # Main content based on mode
     if "Open = Low" in mode:
-        show_open_low_scanner()
+        show_open_low_scanner(filter_type, selected_sectors)
     elif "Low Float" in mode:
-        show_low_float_scanner()
-    elif "Backtesting" in mode:
-        show_backtesting()
+        show_low_float_scanner(filter_type, selected_sectors)
     else:
-        show_settings()
+        show_dashboard()
 
-# ─── SCANNER FUNCTIONS ──────────────────────────────────────
-def show_open_low_scanner():
-    """Open = Low Scanner dengan parallel processing"""
+# ─── OPEN = LOW SCANNER ─────────────────────────────
+def show_open_low_scanner(filter_type, selected_sectors):
     st.header("📈 Open = Low Scanner")
-    st.markdown("Mendeteksi saham dengan pola Open sama dengan Low")
+    st.markdown("Mendeteksi saham dengan pola Open sama dengan Low (potensi reversal)")
     
+    # Parameters
     col1, col2, col3 = st.columns(3)
     with col1:
-        period = st.selectbox("Periode Analisis", ["7 Hari", "14 Hari", "30 Hari", "90 Hari"])
+        period = st.selectbox("Periode Analisis", ["7 Hari", "14 Hari", "30 Hari", "90 Hari"], index=2)
+        days = int(period.split()[0])
     with col2:
-        min_gain = st.slider("Minimal Gain (%)", 1, 20, 5)
+        min_gain = st.slider("Minimal Gain (%)", 1, 20, 5, help="Target kenaikan minimal")
     with col3:
-        limit = st.number_input("Limit Hasil", 5, 50, 20)
+        limit = st.number_input("Limit Hasil", 5, 50, 20, help="Jumlah maksimal saham yang ditampilkan")
     
-    # Progress bar
-    progress_bar = st.progress(0)
-    status_text = st.empty()
+    # Advanced options
+    with st.expander("⚙️ Advanced Options"):
+        col1, col2 = st.columns(2)
+        with col1:
+            tolerance = st.slider("Toleransi Open=Low (%)", 0.1, 2.0, 0.5, step=0.1) / 100
+        with col2:
+            lookahead = st.slider("Hari Lookahead", 3, 10, 5, help="Jumlah hari untuk menghitung gain")
     
-    if st.button("🚀 MULAI SCAN", type="primary"):
-        # Ambil daftar saham
-        stocks = StocksList.get_all_stocks()
+    # Start button
+    if st.button("🚀 MULAI SCAN", type="primary", use_container_width=True):
+        # Get stocks based on filter
+        if filter_type == "Semua Saham":
+            stocks = StocksList.get_all_stocks()
+        else:
+            stocks = []
+            for sector in selected_sectors:
+                stocks.extend(StocksList.get_stocks_by_sector(sector))
+            stocks = list(set(stocks))  # Remove duplicates
         
-        # Filter berdasarkan pilihan
-        filtered_stocks = stocks[:50]  # Contoh: limit 50 untuk demo
+        if not stocks:
+            st.warning("Tidak ada saham yang dipilih!")
+            return
         
+        st.info(f"📊 Memproses {len(stocks)} saham...")
+        
+        # Progress bars
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        
+        # Scan with parallel processing
         results = []
         scanner = PatternScanner()
         
-        # Parallel processing
         with ThreadPoolExecutor(max_workers=10) as executor:
             futures = {
-                executor.submit(scanner.scan_open_low_pattern, stock, 
-                              int(period.split()[0]), min_gain): stock 
-                for stock in filtered_stocks
+                executor.submit(scanner.scan_open_low_pattern, stock, days, min_gain): stock 
+                for stock in stocks
             }
             
             for i, future in enumerate(as_completed(futures)):
                 stock = futures[future]
                 try:
-                    result = future.result(timeout=10)
+                    result = future.result(timeout=15)
                     if result:
                         results.append(result)
-                        
-                        # Kirim notifikasi jika diaktifkan
-                        if st.session_state.get('enable_notifications', False):
-                            NotificationSystem.send_telegram_message(
-                                NotificationSystem.create_alert_message(
-                                    stock, "Open=Low", result
-                                )
-                            )
                 except Exception as e:
-                    status_text.text(f"Error processing {stock}: {str(e)}")
+                    status_text.text(f"Error processing {stock}")
                 
                 # Update progress
-                progress = (i + 1) / len(filtered_stocks)
+                progress = (i + 1) / len(stocks)
                 progress_bar.progress(progress)
-                status_text.text(f"Processing: {i+1}/{len(filtered_stocks)} stocks")
+                status_text.text(f"Processing: {i+1}/{len(stocks)} stocks")
         
         progress_bar.empty()
         status_text.empty()
         
         if results:
-            # Tampilkan hasil
+            # Create DataFrame and sort
             df = pd.DataFrame(results)
-            df = df.sort_values('probabilitas', ascending=False).head(limit)
+            df = df.sort_values(['probabilitas', 'rata_rata_kenaikan'], ascending=False).head(limit)
             
             st.success(f"✅ Ditemukan {len(df)} saham dengan pola Open=Low!")
             
             # Tabs for different views
-            tab1, tab2, tab3 = st.tabs(["📋 Hasil Scan", "📊 Analisis", "🤖 AI Insight"])
+            tab1, tab2, tab3 = st.tabs(["📋 Hasil Scan", "📊 Visualisasi", "🤖 Analisis AI"])
             
             with tab1:
-                st.dataframe(df, use_container_width=True)
+                # Format dataframe for display
+                display_df = df[['saham', 'frekuensi', 'probabilitas', 'rata_rata_kenaikan', 
+                                'max_kenaikan', 'last_pattern']].copy()
+                display_df.columns = ['Saham', 'Frekuensi', 'Probabilitas (%)', 'Rata² Gain (%)', 
+                                     'Max Gain (%)', 'Pattern Terakhir']
+                display_df['Probabilitas (%)'] = display_df['Probabilitas (%)'].round(1)
+                display_df['Rata² Gain (%)'] = display_df['Rata² Gain (%)'].round(1)
+                display_df['Max Gain (%)'] = display_df['Max Gain (%)'].round(1)
                 
-                # Export options
+                st.dataframe(display_df, use_container_width=True, hide_index=True)
+                
+                # Export buttons
                 col1, col2 = st.columns(2)
                 with col1:
                     csv = df.to_csv(index=False)
-                    st.download_button("📥 Download CSV", csv, "scan_results.csv", "text/csv")
+                    st.download_button("📥 Download CSV", csv, "scan_results.csv", "text/csv", use_container_width=True)
                 with col2:
                     # Excel export
                     df.to_excel("scan_results.xlsx", index=False)
                     with open("scan_results.xlsx", "rb") as f:
-                        st.download_button("📥 Download Excel", f, "scan_results.xlsx")
+                        st.download_button("📥 Download Excel", f, "scan_results.xlsx", use_container_width=True)
             
             with tab2:
                 # Charts
                 fig = make_subplots(
                     rows=2, cols=2,
                     subplot_titles=("Top 10 by Probability", "Gain Distribution",
-                                  "Frequency Analysis", "Risk-Reward")
+                                  "Frequency Analysis", "Risk-Reward Scatter"),
+                    specs=[[{"type": "bar"}, {"type": "histogram"}],
+                          [{"type": "bar"}, {"type": "scatter"}]]
                 )
                 
-                # Top 10 probability
                 top10 = df.head(10)
+                
+                # Top 10 probability
                 fig.add_trace(
                     go.Bar(x=top10['saham'], y=top10['probabilitas'],
-                          name="Probability", marker_color='green'),
+                          marker_color='green', name="Probability",
+                          text=top10['probabilitas'].round(1),
+                          textposition='outside'),
                     row=1, col=1
                 )
                 
                 # Gain distribution
                 fig.add_trace(
-                    go.Histogram(x=df['rata_rata_kenaikan'], nbinsx=20,
-                                marker_color='blue', name="Gain"),
+                    go.Histogram(x=df['rata_rata_kenaikan'], nbinsx=15,
+                                marker_color='blue', name="Gain Distribution"),
                     row=1, col=2
                 )
                 
                 # Frequency
                 fig.add_trace(
                     go.Bar(x=top10['saham'], y=top10['frekuensi'],
-                          name="Frequency", marker_color='orange'),
+                          marker_color='orange', name="Frequency",
+                          text=top10['frekuensi'],
+                          textposition='outside'),
                     row=2, col=1
                 )
                 
-                # Scatter plot
+                # Risk-Reward scatter
                 fig.add_trace(
                     go.Scatter(x=df['probabilitas'], y=df['rata_rata_kenaikan'],
                              mode='markers+text', text=df['saham'],
-                             marker=dict(size=df['frekuensi']*2, color='red'),
+                             marker=dict(size=df['frekuensi']*2, 
+                                       color=df['max_kenaikan'],
+                                       colorscale='Viridis',
+                                       showscale=True,
+                                       colorbar=dict(title="Max Gain")),
                              name="Risk-Reward"),
                     row=2, col=2
                 )
                 
-                fig.update_layout(height=800, showlegend=False)
+                fig.update_layout(height=800, showlegend=False,
+                                title_text="Analisis Visual Hasil Scan")
+                fig.update_xaxes(tickangle=45)
+                
                 st.plotly_chart(fig, use_container_width=True)
+                
+                # Statistics
+                st.subheader("📈 Statistik Keseluruhan")
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.metric("Rata-rata Probabilitas", f"{df['probabilitas'].mean():.1f}%")
+                with col2:
+                    st.metric("Rata-rata Gain", f"{df['rata_rata_kenaikan'].mean():.1f}%")
+                with col3:
+                    st.metric("Total Pattern", f"{df['frekuensi'].sum()}")
+                with col4:
+                    st.metric("Saham Unique", len(df))
             
             with tab3:
-                # AI Analysis for top 5
-                st.subheader("🤖 AI Analysis untuk Top 5 Saham")
+                st.subheader("🤖 Analisis AI untuk Top 5 Saham")
                 
-                for _, row in df.head(5).iterrows():
-                    with st.expander(f"📈 {row['saham']}"):
-                        col1, col2 = st.columns(2)
+                for idx, row in df.head(5).iterrows():
+                    with st.expander(f"📈 {row['saham']} - Prob: {row['probabilitas']:.1f}% | Gain: {row['rata_rata_kenaikan']:.1f}%"):
+                        # AI Analysis
+                        analysis = AIAnalyzer.analyze_pattern(row)
+                        st.markdown(analysis, unsafe_allow_html=True)
                         
+                        # Fundamental data
+                        st.subheader("📊 Data Fundamental")
+                        fund_data = DataFetcher.get_fundamental_data(row['saham'])
+                        
+                        col1, col2, col3 = st.columns(3)
                         with col1:
-                            st.metric("Probability", f"{row['probabilitas']:.1f}%")
-                            st.metric("Avg Gain", f"{row['rata_rata_kenaikan']:.1f}%")
-                            st.metric("Frequency", f"{row['frekuensi']}x")
-                        
+                            st.metric("Market Cap", f"Rp {fund_data['market_cap']/1e12:.2f}T" if fund_data['market_cap'] > 1e12 else f"Rp {fund_data['market_cap']/1e9:.0f}M")
                         with col2:
-                            # AI Analysis
-                            analysis = AIAnalyzer.analyze_pattern(row)
-                            st.markdown(analysis)
-                            
-                            # Target prediction
-                            targets = AIAnalyzer.predict_next_target(row)
-                            st.markdown(targets)
-                            
-                            # Backtest button
-                            if st.button(f"🔍 Backtest {row['saham']}", key=row['saham']):
-                                backtest_results = BacktestEngine.backtest_pattern(row['saham'])
-                                if backtest_results:
-                                    UIComponents.backtest_results_card(backtest_results)
-                                else:
-                                    st.warning("Data tidak cukup untuk backtest")
+                            st.metric("P/E Ratio", f"{fund_data['pe_ratio']:.1f}" if fund_data['pe_ratio'] > 0 else "N/A")
+                        with col3:
+                            st.metric("Volume Rata²", f"{fund_data['volume_avg']/1e6:.1f}M")
         else:
-            st.warning("Tidak ada saham yang memenuhi kriteria")
+            st.warning("Tidak ada saham yang memenuhi kriteria. Coba turunkan minimal gain atau perpanjang periode.")
 
-def show_low_float_scanner():
-    """Low Float Scanner"""
+# ─── LOW FLOAT SCANNER ──────────────────────────────
+def show_low_float_scanner(filter_type, selected_sectors):
     st.header("🔍 Low Float Scanner")
     st.markdown("Mendeteksi saham dengan free float rendah dan potensi volatilitas tinggi")
     
     col1, col2 = st.columns(2)
     with col1:
-        max_ff = st.slider("Maksimal Free Float (%)", 5, 50, 25)
+        max_ff = st.slider("Maksimal Free Float (%)", 5, 50, 25, 
+                          help="Free float < nilai ini")
     with col2:
         min_volume = st.number_input("Minimal Volume (juta)", 0, 100, 1) * 1_000_000
     
-    if st.button("🔍 SCAN LOW FLOAT", type="primary"):
-        stocks = StocksList.get_all_stocks()
+    if st.button("🔍 SCAN LOW FLOAT", type="primary", use_container_width=True):
+        # Get stocks
+        if filter_type == "Semua Saham":
+            stocks = StocksList.get_all_stocks()
+        else:
+            stocks = []
+            for sector in selected_sectors:
+                stocks.extend(StocksList.get_stocks_by_sector(sector))
+            stocks = list(set(stocks))
         
-        with st.spinner("Scanning low float stocks..."):
+        if not stocks:
+            st.warning("Tidak ada saham yang dipilih!")
+            return
+        
+        with st.spinner(f"Scanning {len(stocks)} saham..."):
             scanner = PatternScanner()
             results = scanner.scan_low_float(stocks, max_ff, min_volume)
         
         if results:
             df = pd.DataFrame(results)
             
-            st.success(f"✅ Ditemukan {len(df)} saham dengan free float < {max_ff}%")
+            st.success(f"✅ Ditemukan {len(df)} saham dengan free float < {max_ff}%!")
             
-            # Visualization
-            col1, col2 = st.columns(2)
+            # Tabs
+            tab1, tab2, tab3 = st.tabs(["📋 Hasil Scan", "📊 Visualisasi", "📈 Detail"])
             
-            with col1:
-                fig = go.Figure(data=[
-                    go.Pie(labels=df['category'].value_counts().index,
-                          values=df['category'].value_counts().values,
-                          hole=0.4)
-                ])
-                fig.update_layout(title="Distribusi Kategori Free Float")
-                st.plotly_chart(fig, use_container_width=True)
+            with tab1:
+                display_df = df[['saham', 'free_float', 'category', 'volatility', 
+                                'volume_avg', 'current_price']].copy()
+                display_df.columns = ['Saham', 'Free Float %', 'Kategori', 'Volatilitas %', 
+                                     'Volume Rata²', 'Harga']
+                display_df['Volume Rata²'] = (display_df['Volume Rata²'] / 1e6).round(1).astype(str) + 'M'
+                display_df['Harga'] = display_df['Harga'].apply(lambda x: f"Rp {x:,.0f}")
+                
+                st.dataframe(display_df, use_container_width=True, hide_index=True)
+                
+                # Export
+                csv = df.to_csv(index=False)
+                st.download_button("📥 Download CSV", csv, "low_float_results.csv", "text/csv")
             
-            with col2:
-                fig = go.Figure(data=[
-                    go.Scatter(x=df['free_float'], y=df['volatility'],
-                              mode='markers+text',
-                              text=df['saham'],
-                              marker=dict(
-                                  size=df['volume_avg']/100000,
-                                  color=df['volatility'],
-                                  colorscale='Viridis',
-                                  showscale=True
-                              ))
-                ])
-                fig.update_layout(
-                    title="Free Float vs Volatilitas",
-                    xaxis_title="Free Float (%)",
-                    yaxis_title="Volatilitas (%)"
-                )
-                st.plotly_chart(fig, use_container_width=True)
+            with tab2:
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    # Pie chart kategori
+                    fig_pie = go.Figure(data=[
+                        go.Pie(labels=df['category'].value_counts().index,
+                              values=df['category'].value_counts().values,
+                              hole=0.4,
+                              marker_colors=['red', 'orange', 'yellow', 'green', 'blue'])
+                    ])
+                    fig_pie.update_layout(title="Distribusi Kategori Free Float")
+                    st.plotly_chart(fig_pie, use_container_width=True)
+                
+                with col2:
+                    # Scatter plot
+                    fig_scatter = go.Figure(data=[
+                        go.Scatter(x=df['free_float'], y=df['volatility'],
+                                  mode='markers+text',
+                                  text=df['saham'],
+                                  textposition="top center",
+                                  marker=dict(
+                                      size=df['volume_avg']/500000,
+                                      color=df['volatility'],
+                                      colorscale='Viridis',
+                                      showscale=True,
+                                      colorbar=dict(title="Volatilitas")
+                                  ))
+                    ])
+                    fig_scatter.update_layout(
+                        title="Free Float vs Volatilitas",
+                        xaxis_title="Free Float (%)",
+                        yaxis_title="Volatilitas (%)"
+                    )
+                    st.plotly_chart(fig_scatter, use_container_width=True)
             
-            # Data table
-            st.dataframe(df, use_container_width=True)
-            
-            # Export
-            csv = df.to_csv(index=False)
-            st.download_button("📥 Download CSV", csv, "low_float_results.csv")
+            with tab3:
+                st.subheader("📈 Top 5 Low Float Stocks")
+                
+                for idx, row in df.head(5).iterrows():
+                    with st.expander(f"{row['saham']} - FF: {row['free_float']}% | Vol: {row['volatility']}%"):
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            st.metric("Free Float", f"{row['free_float']}%")
+                        with col2:
+                            st.metric("Volatilitas", f"{row['volatility']}%")
+                        with col3:
+                            st.metric("Harga", f"Rp {row['current_price']:,.0f}")
+                        
+                        # Chart harga
+                        price_data = DataFetcher.get_stock_data(row['saham'], period="1mo")
+                        if price_data is not None:
+                            fig_price = go.Figure(data=[
+                                go.Candlestick(
+                                    x=price_data.index,
+                                    open=price_data['Open'],
+                                    high=price_data['High'],
+                                    low=price_data['Low'],
+                                    close=price_data['Close']
+                                )
+                            ])
+                            fig_price.update_layout(title=f"{row['saham']} - 1 Month Chart",
+                                                  height=400)
+                            st.plotly_chart(fig_price, use_container_width=True)
         else:
-            st.warning("Tidak ada saham yang ditemukan")
+            st.warning("Tidak ada saham yang ditemukan. Coba naikkan batas free float.")
 
-def show_backtesting():
-    """Backtesting feature"""
-    st.header("📊 Backtesting Engine")
-    st.markdown("Validasi strategi trading dengan data historis")
+# ─── DASHBOARD ──────────────────────────────────────
+def show_dashboard():
+    st.header("📊 Dashboard")
+    st.markdown("Ringkasan market dan rekomendasi hari ini")
+    
+    # Market overview
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+        st.metric("IHSG", "7,234", "+0.5%")
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+        st.metric("Volume", "18.2B", "+2.3%")
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    with col3:
+        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+        st.metric("Top Gainers", "142", "+12")
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    with col4:
+        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+        st.metric("Top Losers", "89", "-5")
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    st.markdown("---")
+    
+    # Quick scan
+    st.subheader("🎯 Quick Scan Results")
     
     col1, col2 = st.columns(2)
+    
     with col1:
-        stock = st.selectbox("Pilih Saham", StocksList.get_all_stocks())
-    with col2:
-        period = st.selectbox("Periode Backtest", ["30 Hari", "90 Hari", "365 Hari", "2 Tahun"])
-    
-    period_map = {
-        "30 Hari": 30,
-        "90 Hari": 90,
-        "365 Hari": 365,
-        "2 Tahun": 730
-    }
-    
-    if st.button("🔍 RUN BACKTEST"):
-        with st.spinner("Running backtest..."):
-            results = BacktestEngine.backtest_pattern(stock, "open_low", period_map[period])
+        st.markdown("**📈 Top Open=Low Candidates**")
+        stocks = StocksList.get_all_stocks()[:10]
+        
+        scanner = PatternScanner()
+        results = []
+        for stock in stocks:
+            result = scanner.scan_open_low_pattern(stock, days=30, min_gain=5)
+            if result:
+                results.append(result)
         
         if results:
-            st.success("✅ Backtest selesai!")
+            df = pd.DataFrame(results)
+            df = df.sort_values('probabilitas', ascending=False).head(5)
             
-            # Metrics
-            col1, col2, col3, col4 = st.columns(4)
-            with col1:
-                st.metric("Total Trades", results['total_trades'])
-            with col2:
-                win_rate_color = "green" if results['win_rate'] >= 50 else "red"
-                st.metric("Win Rate", f"{results['win_rate']:.1f}%", 
-                         delta=f"{results['win_rate']-50:.1f}%" if results['win_rate'] != 50 else None)
-            with col3:
-                st.metric("Avg Profit", f"{results['avg_profit']:.2f}%")
-            with col4:
-                st.metric("Max Profit", f"{results['max_profit']:.2f}%")
-            
-            # Visualisasi
-            st.subheader("📈 Performance Metrics")
-            
-            # Radar chart for performance
-            categories = ['Win Rate', 'Avg Profit', 'Max Profit', 'Profit Factor']
-            values = [
-                results['win_rate']/20,  # Scale to 0-5
-                min(results['avg_profit']/5, 5),
-                min(results['max_profit']/10, 5),
-                min(results['profit_factor'], 5)
-            ]
-            
-            fig = go.Figure(data=go.Scatterpolar(
-                r=values,
-                theta=categories,
-                fill='toself'
-            ))
-            
-            fig.update_layout(
-                polar=dict(
-                    radialaxis=dict(
-                        visible=True,
-                        range=[0, 5]
-                    )),
-                showlegend=False,
-                title="Strategy Performance Radar"
-            )
-            
-            st.plotly_chart(fig, use_container_width=True)
-            
-            # Recommendation based on backtest
-            if results['win_rate'] > 60 and results['avg_profit'] > 3:
-                st.success("✅ STRATEGY VALID: Performa baik, bisa digunakan")
-            elif results['win_rate'] > 50 and results['avg_profit'] > 0:
-                st.warning("⚠️ STRATEGY MODERATE: Performa cukup, perlu optimasi")
-            else:
-                st.error("❌ STRATEGY INVALID: Performa buruk, hindari")
+            for _, row in df.iterrows():
+                st.markdown(f"""
+                - **{row['saham']}**: {row['probabilitas']:.1f}% prob, {row['rata_rata_kenaikan']:.1f}% gain
+                """)
         else:
-            st.warning("Data tidak cukup untuk backtest")
-
-def show_settings():
-    """Settings page"""
-    st.header("⚙️ Settings")
-    
-    st.subheader("Database Management")
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        if st.button("🔄 Update Database"):
-            with st.spinner("Updating database..."):
-                # Implement update logic
-                time.sleep(2)
-            st.success("Database updated!")
+            st.info("Belum ada data scan")
     
     with col2:
-        if st.button("🗑️ Clear Cache"):
-            st.cache_data.clear()
-            st.success("Cache cleared!")
+        st.markdown("**🔍 Top Low Float Candidates**")
+        stocks = StocksList.get_all_stocks()[:10]
+        
+        results = scanner.scan_low_float(stocks, max_ff=30, min_volume=0)
+        if results:
+            df = pd.DataFrame(results)
+            df = df.sort_values('volatility', ascending=False).head(5)
+            
+            for _, row in df.iterrows():
+                st.markdown(f"""
+                - **{row['saham']}**: {row['free_float']}% FF, {row['volatility']}% volatilitas
+                """)
+        else:
+            st.info("Belum ada data scan")
     
-    st.subheader("Notification Settings")
+    st.markdown("---")
     
-    telegram_token = st.text_input("Telegram Bot Token", 
-                                   value=TELEGRAM_BOT_TOKEN,
-                                   type="password")
-    telegram_chat = st.text_input("Telegram Chat ID", 
-                                  value=TELEGRAM_CHAT_ID)
-    
-    if st.button("Save Settings"):
-        # Save to .env file
-        with open(".env", "w") as f:
-            f.write(f"TELEGRAM_BOT_TOKEN={telegram_token}\n")
-            f.write(f"TELEGRAM_CHAT_ID={telegram_chat}\n")
-        st.success("Settings saved!")
-    
-    st.subheader("About")
+    # Disclaimer
     st.info("""
-    **Radar Aksara Pro** v1.0
-    
-    Aplikasi screening saham IDX dengan fitur:
-    - Real-time data dari Yahoo Finance
-    - Pattern recognition (Open=Low)
-    - Low float scanner
-    - AI-powered analysis
-    - Backtesting engine
-    - Telegram notifications
+    ⚠️ **Disclaimer**: Data ini untuk tujuan edukasi dan analisis, bukan rekomendasi investasi. 
+    Selalu lakukan riset mandiri sebelum mengambil keputusan trading.
     """)
 
-# ─── RUN APP ─────────────────────────────────────────────────
+# ─── RUN APP ─────────────────────────────────────────
 if __name__ == "__main__":
     main()
