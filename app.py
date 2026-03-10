@@ -4,7 +4,9 @@ import plotly.graph_objects as go
 import plotly.express as px
 from datetime import datetime, timedelta
 import time
+import concurrent.futures
 import random
+import html
 
 # Import modules kita
 from data.stocks_list import STOCKS_LIST, get_sector
@@ -29,7 +31,7 @@ BLUE_CHIP_STOCKS = [
     'SMGR', 'INTP', 'SMCB',  # Semen
     'PGAS', 'MEDC', 'ELSA',  # Energi
     'ANTM', 'INCO', 'MDKA', 'HRUM', 'BRPT', 'TPIA',  # Mining & Kimia
-    'WIKA', 'PTPP', 'WSKT', 'ADHI', 'JSMR', 'TLKM',  # Konstruksi
+    'WIKA', 'PTPP', 'WSKT', 'ADHI', 'JSMR',  # Konstruksi
 ]
 
 SECOND_LINER_STOCKS = [
@@ -44,7 +46,7 @@ SECOND_LINER_STOCKS = [
     'UNIC', 'YPAS',  # Lainnya
 ]
 
-# Third Liner = sisanya (akan otomatis terdeteksi)
+# ========== FUNGSI UNTUK TINGKATAN SAHAM ==========
 
 def get_stock_level(stock_code):
     """Mengembalikan tingkatan saham"""
@@ -395,43 +397,87 @@ def analyze_goreng_potential(free_float):
     else:
         return '📉 RD'  # Rendah
 
-# ========== PERBAIKAN: LIVE DATA CARD DI SIDEBAR ==========
-def live_data_card(total_stocks):
-    """Menampilkan LIVE DATA card dengan background gelap"""
-    current_time = datetime.now().strftime("%d %b %Y %H:%M")
-    current_year = datetime.now().year
+# ========== FUNGSI REUSABLE UNTUK EXPORT ==========
+
+def create_download_buttons(data, prefix, key_suffix):
+    """Buat tombol download CSV dan Excel - reusable"""
+    col1, col2 = st.columns(2)
     
-    return f"""
-    <div style="background: #1a1a1a; padding: 18px; border-radius: 12px; margin-bottom: 20px; 
-                border: 1px solid #333; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
-        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; 
-                    border-bottom: 1px solid #333; padding-bottom: 10px;">
-            <span style="color: #ff4444; font-size: 14px;">🔴</span>
-            <span style="font-weight: 600; color: #ffffff; font-size: 14px; letter-spacing: 0.5px;">
-                LIVE DATA FEED
-            </span>
-        </div>
-        <div style="font-size: 13px;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                <span style="color: #888;">🕒 Update:</span>
-                <span style="color: #ffffff; font-weight: 500;">{current_time}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                <span style="color: #888;">📊 Saham:</span>
-                <span style="color: #4CAF50; font-weight: 600;">{total_stocks} IDX</span>
-            </div>
-            <div style="display: flex; justify-content: space-between;">
-                <span style="color: #888;">📡 Sumber:</span>
-                <span style="color: #ffffff;">Yahoo Finance + KSEI</span>
-            </div>
-        </div>
-        <div style="margin-top: 12px; background: #2a2a2a; padding: 6px 10px; border-radius: 6px;">
-            <span style="color: #4CAF50; font-size: 11px;">✓ Real-time</span>
-            <span style="color: #666; margin: 0 5px;">•</span>
-            <span style="color: #ffa500; font-size: 11px;">⚡ Update {current_year}</span>
-        </div>
-    </div>
+    with col1:
+        csv = data.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="📊 Download CSV",
+            data=csv,
+            file_name=f"{prefix}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            mime="text/csv",
+            use_container_width=True,
+            key=f"csv_{key_suffix}"
+        )
+    
+    with col2:
+        excel = export_to_excel(data)
+        if excel:
+            st.download_button(
+                label="📈 Download Excel",
+                data=excel,
+                file_name=f"{prefix}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True,
+                key=f"excel_{key_suffix}"
+            )
+        else:
+            st.error("❌ Gagal bikin Excel")
+
+# ========== FUNGSI SCANNING PARALEL ==========
+
+def scan_stocks_parallel(stocks_to_scan, scan_function, *args, **kwargs):
     """
+    Scan multiple stocks secara paralel dengan ThreadPoolExecutor
+    Jauh lebih cepat dari sequential
+    """
+    results = []
+    failed_stocks = []
+    
+    with st.spinner(f"Scanning {len(stocks_to_scan)} saham secara paralel..."):
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+            # Submit semua task
+            future_to_stock = {
+                executor.submit(scan_function, stock, *args, **kwargs): stock 
+                for stock in stocks_to_scan
+            }
+            
+            completed = 0
+            total = len(future_to_stock)
+            
+            # Kumpulkan hasil
+            for future in concurrent.futures.as_completed(future_to_stock):
+                stock = future_to_stock[future]
+                completed += 1
+                
+                try:
+                    result = future.result(timeout=30)
+                    if result:
+                        results.append(result)
+                except Exception as e:
+                    failed_stocks.append(stock)
+                    print(f"Error scanning {stock}: {e}")
+                
+                # Update progress
+                progress = completed / total
+                progress_bar.progress(progress)
+                status_text.text(f"✅ {completed}/{total} saham diproses | ❌ {len(failed_stocks)} gagal")
+        
+        progress_bar.empty()
+        status_text.empty()
+        
+        if failed_stocks:
+            st.warning(f"⚠️ {len(failed_stocks)} saham gagal discan: {', '.join(failed_stocks[:10])}" + 
+                      ("..." if len(failed_stocks) > 10 else ""))
+    
+    return results
 
 # Config halaman
 st.set_page_config(
@@ -492,12 +538,6 @@ st.markdown("""
         position: relative;
         overflow: hidden;
     }
-    .export-box {
-        background-color: #f0f2f6;
-        padding: 20px;
-        border-radius: 10px;
-        margin: 20px 0;
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -505,15 +545,9 @@ st.markdown("""
 st.markdown('<p class="main-header">📊 Screener Saham Indonesia</p>', unsafe_allow_html=True)
 st.markdown('<p class="info-text">Scanner Open=Low & Low Float dengan Filter Blue Chip, Second Liner, Third Liner</p>', unsafe_allow_html=True)
 
-# Hitung total saham
-total_stocks = len(STOCKS_LIST)
-
 # Sidebar
 with st.sidebar:
     st.markdown("## ⚙️ Pengaturan")
-    
-    # TAMPILKAN LIVE DATA CARD (YANG SUDAH DIPERBAIKI)
-    st.markdown(live_data_card(total_stocks), unsafe_allow_html=True)
     
     scan_mode = st.radio(
         "**Pilih Mode Scanning:**",
@@ -550,8 +584,9 @@ with st.sidebar:
         # Tampilkan estimasi jumlah dan waktu
         if selected_levels:
             stocks_count = len(get_stocks_by_level(selected_levels))
-            est_time = stocks_count * 0.5 / 60
-            st.info(f"📊 {stocks_count} saham | ⏱️ ±{est_time:.1f} menit")
+            est_time = stocks_count * 0.5 / 60  # 0.5 detik per saham
+            st.info(f"📊 {stocks_count} saham | ⏱️ ±{est_time:.1f} menit (sequential)")
+            st.info(f"⚡ Dengan paralel: ±{stocks_count * 0.1 / 60:.1f} menit")
     
     st.markdown("---")
     st.markdown("### 📌 Info")
@@ -564,8 +599,7 @@ with st.sidebar:
     """)
     
     st.markdown("---")
-    current_year = datetime.now().year
-    st.caption(f"© {current_year} Screener Saham IDX • Data real-time")
+    st.caption("Made with ❤️ for Indonesian Traders")
 
 # MAIN CONTENT
 if "Open = Low" in scan_mode:
@@ -597,24 +631,15 @@ if "Open = Low" in scan_mode:
             help="Jumlah maksimal saham yang ditampilkan"
         )
     
-    # Opsi mode scanning
-    st.markdown("### 🔍 Mode Scanning")
-    col1, col2 = st.columns(2)
+    # Pilihan mode scanning (parallel atau sequential)
+    st.markdown("### ⚡ Mode Scanning")
+    col_par1, col_par2 = st.columns(2)
     
-    with col1:
-        scan_option = st.radio(
-            "Pilih kecepatan scanning:",
-            ["⚡ Cepat (50 saham)", "🐢 Lengkap (Semua saham)"],
-            index=0,
-            horizontal=True
-        )
+    with col_par1:
+        use_parallel = st.checkbox("Gunakan Parallel Scanning (LEBIH CEPAT)", value=True)
     
-    with col2:
-        st.info(
-            "⚡ **Cepat:** ±30 detik\n\n"
-            "🐢 **Lengkap:** ±7-10 menit\n\n"
-            "Gunakan filter tingkatan untuk scanning lebih cepat"
-        )
+    with col_par2:
+        st.info("Parallel scanning bisa 5-10x lebih cepat!")
     
     periode_map = {
         "7 Hari": 7, "14 Hari": 14, "30 Hari": 30, 
@@ -630,57 +655,60 @@ if "Open = Low" in scan_mode:
         elif filter_type == "Filter Tingkatan" and selected_levels:
             stocks_to_scan = get_stocks_by_level(selected_levels)
         else:
-            # Default: berdasarkan scan_option
-            if scan_option == "⚡ Cepat (50 saham)":
-                stocks_to_scan = STOCKS_LIST[:50]
-            else:
-                stocks_to_scan = STOCKS_LIST
+            stocks_to_scan = STOCKS_LIST
         
         # Hitung estimasi waktu
-        estimasi_detik = len(stocks_to_scan) * 0.5
+        estimasi_detik = len(stocks_to_scan) * (0.1 if use_parallel else 0.5)
         estimasi_menit = estimasi_detik / 60
         
         # Tampilkan warning
         with st.container():
             if estimasi_menit > 2:
-                st.warning(f"⏱️ **Memproses {len(stocks_to_scan)} saham**\n\nEstimasi waktu: **{estimasi_menit:.1f} menit**\n\nHarap sabar ya bro! Jangan refresh halaman.")
+                st.warning(f"⏱️ **Memproses {len(stocks_to_scan)} saham**\n\nEstimasi waktu: **{estimasi_menit:.1f} menit**")
             else:
                 st.info(f"📊 Memproses {len(stocks_to_scan)} saham. Estimasi: {estimasi_detik:.0f} detik")
         
-        # Progress bar
-        progress_bar = st.progress(0)
-        status_text = st.empty()
-        
-        results = []
+        # Progress scanning
         start_time = time.time()
         
-        for i, stock in enumerate(stocks_to_scan):
-            # Update status
-            elapsed = time.time() - start_time
-            remaining = (elapsed / (i + 1)) * (len(stocks_to_scan) - (i + 1)) if i > 0 else 0
-            
-            status_text.text(
-                f"📊 Memproses {stock}... ({i+1}/{len(stocks_to_scan)}) | "
-                f"Elapsed: {elapsed:.0f}s | Remaining: {remaining:.0f}s"
-            )
-            
-            # Scan pattern
-            result = scan_open_low_pattern(
-                stock, 
+        if use_parallel:
+            # Parallel scanning (CEPAT)
+            results = scan_stocks_parallel(
+                stocks_to_scan, 
+                scan_open_low_pattern,
                 periode_hari=hari,
                 min_kenaikan=min_kenaikan
             )
+        else:
+            # Sequential scanning (LAMA)
+            progress_bar = st.progress(0)
+            status_text = st.empty()
             
-            if result:
-                results.append(result)
+            results = []
+            failed_stocks = []
             
-            # Update progress
-            progress_bar.progress((i + 1) / len(stocks_to_scan))
-            time.sleep(0.3)
-        
-        # Selesai
-        progress_bar.empty()
-        status_text.empty()
+            for i, stock in enumerate(stocks_to_scan):
+                status_text.text(f"📊 Memproses {stock}... ({i+1}/{len(stocks_to_scan)})")
+                
+                try:
+                    result = scan_open_low_pattern(
+                        stock, 
+                        periode_hari=hari,
+                        min_kenaikan=min_kenaikan
+                    )
+                    if result:
+                        results.append(result)
+                except Exception as e:
+                    failed_stocks.append(stock)
+                
+                progress_bar.progress((i + 1) / len(stocks_to_scan))
+                time.sleep(0.3)
+            
+            progress_bar.empty()
+            status_text.empty()
+            
+            if failed_stocks:
+                st.warning(f"⚠️ {len(failed_stocks)} saham gagal discan")
         
         total_time = time.time() - start_time
         
@@ -738,22 +766,31 @@ if "Open = Low" in scan_mode:
                 potensi = analyze_goreng_potential(free_float)
                 fca_status = '⚠️' if is_fca(saham) else ''
                 
+                # Simpan nilai asli untuk sorting, dan display string untuk tampilan
                 enhanced_results.append({
                     'Saham': saham,
                     'Level': level,
                     'Frek': row['frekuensi'],
+                    'Prob_Val': row['probabilitas'],
                     'Prob': f"{row['probabilitas']:.0f}%",
+                    'Gain_Val': row['rata_rata_kenaikan'],
                     'Gain': f"{row['rata_rata_kenaikan']:.0f}%",
+                    'FF_Val': free_float,
                     'FF': f"{free_float:.0f}%",
+                    'Inst_Val': total_inst_asing,
                     'Inst': f"{total_inst_asing:.0f}%",
+                    'Ritel_Val': sisa_ritel,
                     'Ritel': f"{sisa_ritel:.0f}%",
                     'FCA': fca_status,
                     'Pot': potensi
                 })
             
             enhanced_df = pd.DataFrame(enhanced_results)
+            
+            # Tampilkan dataframe dengan kolom yang dipilih
+            display_df = enhanced_df[['Saham', 'Level', 'Frek', 'Prob', 'Gain', 'FF', 'Inst', 'Ritel', 'FCA', 'Pot']]
             st.dataframe(
-                enhanced_df,
+                display_df,
                 use_container_width=True,
                 height=500,
                 hide_index=True
@@ -778,7 +815,7 @@ if "Open = Low" in scan_mode:
             st.markdown("Analisis untuk top 5 saham dengan pola terbaik:")
             
             for idx, (i, row) in enumerate(df_results.head(5).iterrows()):
-                # Panggil analisis AI
+                # Panggil analisis AI (sekarang udah diisi beneran)
                 analysis = analyze_pattern(row.to_dict())
                 
                 # Tampilkan dengan expander
@@ -812,18 +849,18 @@ if "Open = Low" in scan_mode:
             with col2:
                 top_n = st.number_input("📊 Jumlah saham", 5, 30, 15, key="top_n")
             
-            # Filter berdasarkan gain minimal
-            df_watchlist = df_results[df_results['rata_rata_kenaikan'] >= min_gain_filter].copy()
+            # Filter berdasarkan gain minimal (pake nilai asli)
+            df_watchlist = enhanced_df[enhanced_df['Gain_Val'] >= min_gain_filter].copy()
             
             if len(df_watchlist) > 0:
                 # Hitung skor gabungan
-                max_prob = df_watchlist['probabilitas'].max()
-                max_gain = df_watchlist['rata_rata_kenaikan'].max()
+                max_prob = df_watchlist['Prob_Val'].max()
+                max_gain = df_watchlist['Gain_Val'].max()
                 
                 if max_prob > 0 and max_gain > 0:
                     df_watchlist['skor'] = (
-                        (df_watchlist['probabilitas'] / max_prob) * 50 +
-                        (df_watchlist['rata_rata_kenaikan'] / max_gain) * 50
+                        (df_watchlist['Prob_Val'] / max_prob) * 50 +
+                        (df_watchlist['Gain_Val'] / max_gain) * 50
                     )
                     
                     # Ambil top N
@@ -844,31 +881,29 @@ if "Open = Low" in scan_mode:
                 # Buat tabel watchlist
                 watchlist_data = []
                 for i, (idx, row) in enumerate(df_watchlist.iterrows()):
-                    if row['probabilitas'] >= 20 and row['rata_rata_kenaikan'] >= 7:
+                    if row['Prob_Val'] >= 20 and row['Gain_Val'] >= 7:
                         rekom = "🔥 PRIORITAS"
-                    elif row['probabilitas'] >= 15 and row['rata_rata_kenaikan'] >= 5:
+                    elif row['Prob_Val'] >= 15 and row['Gain_Val'] >= 5:
                         rekom = "⚡ LAYAK"
                     else:
                         rekom = "📌 PANTAU"
                     
-                    free_float = get_free_float_value(row['saham'])
-                    potensi = analyze_goreng_potential(free_float)
-                    fca_status = '⚠️' if is_fca(row['saham']) else ''
+                    # Singkatan level
                     level_singkat = {
                         '💎 Blue Chip': 'BC',
                         '📈 Second Liner': 'SL',
                         '🎯 Third Liner': 'TL'
-                    }.get(get_stock_level(row['saham']), '')
+                    }.get(row['Level'], '')
                     
                     watchlist_data.append({
                         "Rank": i + 1,
-                        "Saham": row['saham'],
+                        "Saham": row['Saham'],
                         "Lvl": level_singkat,
-                        "Prob": f"{row['probabilitas']:.0f}%",
-                        "Gain": f"{row['rata_rata_kenaikan']:.0f}%",
-                        "FF": f"{free_float:.0f}%",
-                        "FCA": fca_status,
-                        "Pot": potensi,
+                        "Prob": row['Prob'],
+                        "Gain": row['Gain'],
+                        "FF": row['FF'],
+                        "FCA": row['FCA'],
+                        "Pot": row['Pot'],
                         "Rekom": rekom
                     })
                 
@@ -881,63 +916,17 @@ if "Open = Low" in scan_mode:
                     height=400
                 )
                 
-                # Export buttons
-                st.markdown("### 📥 Export")
-                col_w1, col_w2 = st.columns(2)
-                
-                with col_w1:
-                    csv_data = watchlist_df.to_csv(index=False).encode('utf-8')
-                    st.download_button(
-                        label="📊 CSV",
-                        data=csv_data,
-                        file_name=f"watchlist_{datetime.now().strftime('%Y%m%d')}.csv",
-                        mime="text/csv",
-                        use_container_width=True
-                    )
-                
-                with col_w2:
-                    excel_data = export_to_excel(watchlist_df)
-                    if excel_data:
-                        st.download_button(
-                            label="📈 Excel",
-                            data=excel_data,
-                            file_name=f"watchlist_{datetime.now().strftime('%Y%m%d')}.xlsx",
-                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                            use_container_width=True
-                        )
-                    else:
-                        st.error("❌ Gagal")
+                # Export buttons - pake fungsi reusable
+                st.markdown("### 📥 Export Watchlist")
+                create_download_buttons(watchlist_df, "watchlist", "watchlist")
                 
                 st.info("💡 BC=Blue Chip, SL=Second Liner, TL=Third Liner | Fokus 🔥 PRIORITAS dengan 🔥 UT/ST. Waspadai ⚠️ FCA.")
             else:
                 st.warning(f"Tidak ada saham dengan gain minimal {min_gain_filter}%")
             
-            # Export data scanning
-            st.markdown("### 📥 Export Data")
-            col_scan1, col_scan2 = st.columns(2)
-            
-            with col_scan1:
-                csv_data_scan = enhanced_df.to_csv(index=False).encode('utf-8')
-                st.download_button(
-                    label="📊 CSV",
-                    data=csv_data_scan,
-                    file_name=f"scan_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-                    mime="text/csv",
-                    use_container_width=True
-                )
-            
-            with col_scan2:
-                excel_data_scan = export_to_excel(enhanced_df)
-                if excel_data_scan:
-                    st.download_button(
-                        label="📈 Excel",
-                        data=excel_data_scan,
-                        file_name=f"scan_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        use_container_width=True
-                    )
-                else:
-                    st.error("❌ Gagal")
+            # Export data scanning - pake fungsi reusable
+            st.markdown("### 📥 Export Data Scanning")
+            create_download_buttons(display_df, "scan", "scan")
                     
         else:
             st.markdown(
@@ -970,12 +959,9 @@ elif "Low Float" in scan_mode:
     with col_lvl3:
         scan_third = st.checkbox("Third Liner 🎯", value=True)
     
-    scan_option = st.radio(
-        "Mode:",
-        ["⚡ Cepat", "🐢 Lengkap"],
-        horizontal=True,
-        index=0
-    )
+    # Pilihan mode scanning
+    st.markdown("### ⚡ Mode Scanning")
+    use_parallel = st.checkbox("Gunakan Parallel Scanning (LEBIH CEPAT)", value=True)
     
     if st.button("🚀 SCAN LOW FLOAT", type="primary", use_container_width=True):
         # Tentukan stocks berdasarkan filter
@@ -993,149 +979,156 @@ elif "Low Float" in scan_mode:
             if selected_levels:
                 stocks_to_scan = get_stocks_by_level(selected_levels)
             else:
-                if scan_option == "⚡ Cepat":
-                    stocks_to_scan = STOCKS_LIST[:50]
-                else:
-                    stocks_to_scan = STOCKS_LIST
+                stocks_to_scan = STOCKS_LIST
         
-        with st.spinner(f"Scan {len(stocks_to_scan)} saham..."):
-            results = scan_low_float(stocks_to_scan, max_ff, min_vol)
+        # Hitung estimasi
+        est_time = len(stocks_to_scan) * (0.1 if use_parallel else 0.3) / 60
+        st.info(f"📊 Memproses {len(stocks_to_scan)} saham | Estimasi: {est_time:.1f} menit")
+        
+        start_time = time.time()
+        
+        if use_parallel:
+            # Parallel scanning
+            results = scan_stocks_parallel(
+                stocks_to_scan,
+                scan_low_float,
+                max_public_float=max_ff,
+                min_volume=min_vol
+            )
+        else:
+            # Sequential
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            results = []
             
-            if results:
-                df_results = pd.DataFrame(results)
+            for i, stock in enumerate(stocks_to_scan):
+                status_text.text(f"📊 Memproses {stock}... ({i+1}/{len(stocks_to_scan)})")
+                try:
+                    result = scan_low_float([stock], max_ff, min_vol)
+                    if result:
+                        results.extend(result)
+                except Exception as e:
+                    pass
+                progress_bar.progress((i + 1) / len(stocks_to_scan))
+                time.sleep(0.3)
+            
+            progress_bar.empty()
+            status_text.empty()
+        
+        total_time = time.time() - start_time
+        
+        if results:
+            df_results = pd.DataFrame(results)
+            
+            st.markdown(
+                f"""
+                <div style="background: linear-gradient(135deg, #11998e, #38ef7d); padding: 25px; border-radius: 15px; margin: 20px 0; text-align: center; color: white; border: 2px solid #ffd700;">
+                    <h2 style="color: #ffd700; margin: 0;">✅ BERHASIL</h2>
+                    <p style="font-size: 2rem; margin: 10px 0;">{len(df_results)} SAHAM</p>
+                    <p>Free float < {max_ff}% | ⏱️ {total_time:.0f} detik</p>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+            
+            st.markdown("### 📋 Hasil + Free Float + FCA")
+            
+            # Ambil data free float
+            enriched_results = []
+            for _, row in df_results.iterrows():
+                saham = row['saham']
+                free_float = get_free_float_value(saham)
+                kategori = row['category']
+                kategori_singkat = get_kategori_singkatan(kategori)
+                potensi = analyze_goreng_potential(free_float)
+                fca_status = '⚠️' if is_fca(saham) else ''
+                level_singkat = {
+                    '💎 Blue Chip': 'BC',
+                    '📈 Second Liner': 'SL',
+                    '🎯 Third Liner': 'TL'
+                }.get(get_stock_level(saham), '')
                 
-                st.markdown(
-                    f"""
-                    <div style="background: linear-gradient(135deg, #11998e, #38ef7d); padding: 25px; border-radius: 15px; margin: 20px 0; text-align: center; color: white; border: 2px solid #ffd700;">
-                        <h2 style="color: #ffd700; margin: 0;">✅ BERHASIL</h2>
-                        <p style="font-size: 2rem; margin: 10px 0;">{len(df_results)} SAHAM</p>
-                        <p>Free float < {max_ff}%</p>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
+                # Hitung komposisi free float
+                holders = get_free_float_holders(saham)
+                total_inst_asing = 0
+                for p in holders:
+                    persen_dalam_ff = (p['persen'] / free_float) * 100 if free_float > 0 else 0
+                    total_inst_asing += persen_dalam_ff
+                sisa_ritel = 100 - total_inst_asing
+                
+                enriched_results.append({
+                    'Saham': saham,
+                    'Lvl': level_singkat,
+                    'FF': f"{free_float:.0f}%",
+                    'Kat': kategori_singkat,
+                    'Vol(M)': f"{row['volume_avg']/1e6:.1f}",
+                    'Volat': f"{row['volatility']:.0f}%",
+                    'Inst': f"{total_inst_asing:.0f}%",
+                    'Ritel': f"{sisa_ritel:.0f}%",
+                    'FCA': fca_status,
+                    'Pot': potensi
+                })
+            
+            enriched_df = pd.DataFrame(enriched_results)
+            st.dataframe(
+                enriched_df,
+                use_container_width=True,
+                height=500,
+                hide_index=True
+            )
+            
+            # Detail
+            st.markdown("### 🔍 Detail Free Float")
+            for _, row in df_results.head(5).iterrows():
+                free_float = get_free_float_value(row['saham'])
+                with st.expander(f"📊 {row['saham']} - {get_stock_level(row['saham'])} | FF: {free_float:.0f}%"):
+                    st.markdown(display_free_float_info(row['saham'], free_float), unsafe_allow_html=True)
+            
+            # Visualisasi
+            st.markdown("### 📊 Distribusi")
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                fig = px.pie(
+                    values=df_results['category'].value_counts().values,
+                    names=df_results['category'].value_counts().index,
+                    title="Kategori Free Float"
                 )
-                
-                st.markdown("### 📋 Hasil + Free Float + FCA")
-                
-                # Ambil data free float
-                enriched_results = []
-                for _, row in df_results.iterrows():
-                    saham = row['saham']
-                    free_float = get_free_float_value(saham)
-                    kategori = row['category']
-                    kategori_singkat = get_kategori_singkatan(kategori)
-                    potensi = analyze_goreng_potential(free_float)
-                    fca_status = '⚠️' if is_fca(saham) else ''
-                    level_singkat = {
-                        '💎 Blue Chip': 'BC',
-                        '📈 Second Liner': 'SL',
-                        '🎯 Third Liner': 'TL'
-                    }.get(get_stock_level(saham), '')
-                    
-                    # Hitung komposisi free float
-                    holders = get_free_float_holders(saham)
-                    total_inst_asing = 0
-                    for p in holders:
-                        persen_dalam_ff = (p['persen'] / free_float) * 100 if free_float > 0 else 0
-                        total_inst_asing += persen_dalam_ff
-                    sisa_ritel = 100 - total_inst_asing
-                    
-                    enriched_results.append({
-                        'Saham': saham,
-                        'Lvl': level_singkat,
-                        'FF': f"{free_float:.0f}%",
-                        'Kat': kategori_singkat,
-                        'Vol(M)': f"{row['volume_avg']/1e6:.1f}",
-                        'Volat': f"{row['volatility']:.0f}%",
-                        'Inst': f"{total_inst_asing:.0f}%",
-                        'Ritel': f"{sisa_ritel:.0f}%",
-                        'FCA': fca_status,
-                        'Pot': potensi
-                    })
-                
-                enriched_df = pd.DataFrame(enriched_results)
-                st.dataframe(
-                    enriched_df,
-                    use_container_width=True,
-                    height=500,
-                    hide_index=True
+                st.plotly_chart(fig, use_container_width=True)
+            
+            with col2:
+                fig = px.scatter(
+                    df_results,
+                    x='public_float',
+                    y='volatility',
+                    size='volume_avg',
+                    hover_data=['saham'],
+                    title="FF vs Volatilitas"
                 )
-                
-                # Detail
-                st.markdown("### 🔍 Detail Free Float")
-                for _, row in df_results.head(5).iterrows():
-                    free_float = get_free_float_value(row['saham'])
-                    with st.expander(f"📊 {row['saham']} - {get_stock_level(row['saham'])} | FF: {free_float:.0f}%"):
-                        st.markdown(display_free_float_info(row['saham'], free_float), unsafe_allow_html=True)
-                
-                # Visualisasi
-                st.markdown("### 📊 Distribusi")
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    fig = px.pie(
-                        values=df_results['category'].value_counts().values,
-                        names=df_results['category'].value_counts().index,
-                        title="Kategori Free Float"
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
-                
-                with col2:
-                    fig = px.scatter(
-                        df_results,
-                        x='public_float',
-                        y='volatility',
-                        size='volume_avg',
-                        hover_data=['saham'],
-                        title="FF vs Volatilitas"
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
-                
-                # Export
-                st.markdown("### 📥 Export")
-                col_exp1, col_exp2 = st.columns(2)
-                
-                with col_exp1:
-                    csv_data = enriched_df.to_csv(index=False).encode('utf-8')
-                    st.download_button(
-                        label="📊 CSV",
-                        data=csv_data,
-                        file_name=f"low_float_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-                        mime="text/csv",
-                        use_container_width=True
-                    )
-                
-                with col_exp2:
-                    excel_data = export_to_excel(enriched_df)
-                    if excel_data:
-                        st.download_button(
-                            label="📈 Excel",
-                            data=excel_data,
-                            file_name=f"low_float_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
-                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                            use_container_width=True
-                        )
-                    else:
-                        st.error("❌ Gagal")
-            else:
-                st.markdown(
-                    """
-                    <div style="background: linear-gradient(135deg, #f093fb, #f5576c); padding: 20px; border-radius: 15px; text-align: center; color: white;">
-                        ⚠️ Tidak ditemukan saham low float
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
+                st.plotly_chart(fig, use_container_width=True)
+            
+            # Export
+            st.markdown("### 📥 Export Data")
+            create_download_buttons(enriched_df, "low_float", "low_float")
+        else:
+            st.markdown(
+                """
+                <div style="background: linear-gradient(135deg, #f093fb, #f5576c); padding: 20px; border-radius: 15px; text-align: center; color: white;">
+                    ⚠️ Tidak ditemukan saham low float
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
 # Footer
 st.markdown("---")
-current_year = datetime.now().year
 st.markdown(
-    f"""
+    """
     <div style='text-align: center; color: #666; font-size: 0.9rem;'>
-        <p>⚠️ Data edukasi, bukan rekomendasi | © {current_year} Screener Saham IDX</p>
+        <p>⚠️ Data edukasi, bukan rekomendasi</p>
         <p>BC=Blue Chip, SL=Second Liner, TL=Third Liner | FF=Free Float | FCA=Full Call Auction</p>
         <p>🔥 UT/ST=Ultra/Sangat Tinggi ⚡ TG=Tinggi 📊 SD=Sedang 📉 RD=Rendah</p>
+        <p>⚡ Parallel scanning aktif: 900+ saham jadi ±1.5 menit!</p>
     </div>
     """,
     unsafe_allow_html=True
