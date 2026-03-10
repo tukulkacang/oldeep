@@ -973,15 +973,17 @@ if "Open = Low" in scan_mode:
                 x=top10_df['saham'],
                 y=top10_df['frekuensi'],
                 marker=dict(
-                    color=top10_df['probabilitas'],
-                    colorscale=[[0, '#1a3a4a'], [0.5, '#0099cc'], [1, '#00d4aa']],
+                    color=top10_df['probabilitas'].tolist(),
+                    colorscale='Teal',
                     showscale=True,
                     colorbar=dict(
-                        title="Prob (%)",
+                        title=dict(
+                            text="Prob (%)",
+                            font=dict(color='#8b949e', size=10, family='JetBrains Mono')
+                        ),
                         tickfont=dict(color='#8b949e', size=10, family='JetBrains Mono'),
-                        titlefont=dict(color='#8b949e', size=10, family='JetBrains Mono'),
-                        bgcolor='rgba(0,0,0,0)',
-                        outlinecolor='#21262d'
+                        outlinecolor='#21262d',
+                        outlinewidth=1
                     ),
                     line=dict(width=0),
                     opacity=0.9
@@ -1339,18 +1341,20 @@ elif "Low Float" in scan_mode:
             
             with col2:
                 fig = go.Figure()
+                vol_max = df_results['volume_avg'].max()
+                marker_sizes = (df_results['volume_avg'] / vol_max * 20 + 5).tolist() if vol_max > 0 else [8] * len(df_results)
                 fig.add_trace(go.Scatter(
-                    x=df_results['public_float'],
-                    y=df_results['volatility'],
+                    x=df_results['public_float'].tolist(),
+                    y=df_results['volatility'].tolist(),
                     mode='markers',
                     marker=dict(
-                        size=df_results['volume_avg'] / df_results['volume_avg'].max() * 20 + 5,
-                        color=df_results['volatility'],
-                        colorscale=[[0, '#1a3a4a'], [1, '#00d4aa']],
+                        size=marker_sizes,
+                        color=df_results['volatility'].tolist(),
+                        colorscale='Teal',
                         opacity=0.8,
                         line=dict(width=0)
                     ),
-                    text=df_results['saham'],
+                    text=df_results['saham'].tolist(),
                     hovertemplate='<b>%{text}</b><br>Float: %{x:.1f}%<br>Volatilitas: %{y:.1f}%<extra></extra>'
                 ))
                 fig.update_layout(
