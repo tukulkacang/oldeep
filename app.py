@@ -380,10 +380,10 @@ class StocksList:
             "JTPE", "JTRK",
             
             # K
-            "KABF", "KARW", "KASN", "KAYU", "KBAG", "KBRI", "KDSI", "KEEN", "KEJU", "KBLI",
-            "KBLM", "KBRI", "KDSI", "KIAS", "KICI", "KIG", "KIJA", "KINO", "KIOS", "KIRK",
-            "KLAS", "KLBF", "KLEV", "KMDS", "KMTR", "KOBX", "KOCI", "KOIN", "KOKA", "KONI",
-            "KOPI", "KOTA", "KPAL", "KPIG", "KRAS", "KREN", "KUAS", "KUBU", "KUFP",
+            "KABF", "KARW", "KASN", "KAYU", "KBAG", "KBLI", "KBLM", "KBRT", "KDSI", "KEEN",
+            "KEJU", "KIAS", "KICI", "KIG", "KIJA", "KINO", "KIOS", "KIRK", "KLAS", "KLBF",
+            "KLEV", "KMDS", "KMTR", "KOBX", "KOCI", "KOIN", "KOKA", "KONI", "KOPI", "KOTA",
+            "KPAL", "KPIG", "KRAS", "KREN", "KUAS", "KUBU", "KUFP",
             
             # L
             "LABA", "LAGG", "LAPD", "LAPI", "LATU", "LAYU", "LCGP", "LCKM", "LDST", "LEAD",
@@ -416,19 +416,22 @@ class StocksList:
             "PRAS", "PRAY", "PRDA", "PRIM", "PRIN", "PSAB", "PSDN", "PTBA", "PTDU", "PTIS",
             "PTMP", "PTRO", "PTSN", "PUDP", "PURI", "PWON", "PYFA",
             
+            # Q
+            "QUAD", "QURO",
+            
             # R
             "RACE", "RAJA", "RALS", "RANC", "RATU", "RBMS", "RDTX", "REAL", "RELI", "RIMO",
             "RISE", "RMBA", "ROCK", "RODA", "ROTI", "RSCH", "RUKO", "RUM", "RUSA",
             
             # S
             "SABA", "SAFE", "SAIP", "SAME", "SAMF", "SAMP", "SANI", "SAPX", "SARA", "SATO",
-            "SBA", "SBAT", "SBMA", "SCCO", "SCMA", "SCMA", "SDPI", "SDRA", "SEAN", "SEC",
-            "SEMA", "SFAN", "SFSN", "SGER", "SGRO", "SIDO", "SILO", "SIMA", "SIMP", "SINA",
-            "SIPT", "SKBM", "SKLT", "SKYB", "SLIS", "SMAR", "SMDR", "SMGR", "SMIL", "SMKL",
-            "SMMT", "SMSM", "SMTE", "SMTG", "SMTO", "SNLK", "SNMS", "SOC", "SOCI", "SODA",
-            "SONA", "SOSS", "SOUL", "SPMA", "SPMI", "SPNA", "SPTO", "SQMI", "SRIL", "SRSN",
-            "SRTG", "SSIA", "SSMS", "SSTM", "STAR", "STTP", "SUGI", "SULI", "SUMR", "SUNI",
-            "SUPR", "SURY", "SUSA", "SUZI", "SWAT",
+            "SBAT", "SBMA", "SCCO", "SCMA", "SDPI", "SDRA", "SEAN", "SEC", "SEMA", "SFAN",
+            "SFSN", "SGER", "SGRO", "SIDO", "SILO", "SIMA", "SIMP", "SINA", "SIPT", "SKBM",
+            "SKLT", "SKYB", "SLIS", "SMAR", "SMDR", "SMGR", "SMIL", "SMKL", "SMMT", "SMSM",
+            "SMTE", "SMTG", "SMTO", "SNLK", "SNMS", "SOC", "SOCI", "SODA", "SONA", "SOSS",
+            "SOUL", "SPMA", "SPMI", "SPNA", "SPTO", "SQMI", "SRIL", "SRSN", "SRTG", "SSIA",
+            "SSMS", "SSTM", "STAR", "STTP", "SUGI", "SULI", "SUMR", "SUNI", "SUPR", "SURY",
+            "SUSA", "SUZI", "SWAT",
             
             # T
             "TABA", "TAXI", "TBMS", "TBLA", "TBP", "TCID", "TCPI", "TDPM", "TEBE", "TECH",
@@ -442,11 +445,11 @@ class StocksList:
             "URBN", "USFI",
             
             # V
-            "VALU", "VICO", "VINS", "VIVA", "VOKS", "VRNA", "VTNY", "VOK",
+            "VALU", "VICO", "VINS", "VIVA", "VOKS", "VRNA", "VTNY",
             
             # W
             "WAPO", "WEGE", "WEHA", "WGSH", "WICO", "WIIM", "WIKA", "WINR", "WINS", "WINT",
-            "WMUU", "WOMF", "WOOD", "WOWS", "WSBP", "WSKT", "WSKT",
+            "WMUU", "WOMF", "WOOD", "WOWS", "WSBP", "WSKT",
             
             # Y
             "YELO", "YEMA", "YULE",
@@ -476,31 +479,6 @@ class StocksList:
         }
         
         return sector_map.get(sector, all_stocks[:50])
-
-# ─── UI COMPONENTS ──────────────────────────────────
-class UIComponents:
-    """Komponen UI reusable"""
-    
-    @staticmethod
-    def live_badge():
-        return f"""
-        <div style="display: inline-block; background: #ff4444; color: white; 
-                    padding: 2px 8px; border-radius: 12px; font-size: 10px; 
-                    font-weight: bold; animation: pulse 2s infinite;">
-            🔴 LIVE
-        </div>
-        """
-    
-    @staticmethod
-    def stats_card(title, value, delta=None):
-        return f"""
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    padding: 15px; border-radius: 10px; color: white; text-align: center;">
-            <div style="font-size: 12px; opacity: 0.9;">{title}</div>
-            <div style="font-size: 24px; font-weight: bold;">{value}</div>
-            {f'<div style="font-size: 14px;">{delta}</div>' if delta else ''}
-        </div>
-        """
 
 # ─── MAIN APP ───────────────────────────────────────
 def main():
@@ -584,7 +562,11 @@ def main():
                 </div>
             </div>
             <div style="text-align: right;">
-                {UIComponents.live_badge()}
+                <div style="display: inline-block; background: #ff4444; color: white; 
+                            padding: 2px 8px; border-radius: 12px; font-size: 10px; 
+                            font-weight: bold; animation: pulse 2s infinite;">
+                    🔴 LIVE
+                </div>
                 <div style="font-size: 13px; margin-top: 5px; opacity: 0.9;">
                     {current_time} WIB
                 </div>
@@ -593,22 +575,40 @@ def main():
     </div>
     """, unsafe_allow_html=True)
     
-    # Sidebar
+    # ─── SIDEBAR (YANG SUDAH DIPERBAIKI) ───────────────────
     with st.sidebar:
         st.image("https://img.icons8.com/color/96/000000/stocks.png", width=100)
         st.markdown(f"## 🎯 Control Panel {current_year}")
         
-        # Live indicator
+        # ✅ INI BAGIAN YANG DIPERBAIKI - LIVE DATA CARD
         st.markdown(f"""
-        <div style="background: #f0f2f6; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
-            <div style="display: flex; align-items: center; gap: 5px; margin-bottom: 5px;">
-                <span style="color: #ff4444; font-size: 20px;">●</span>
-                <span style="font-weight: bold;">LIVE DATA</span>
+        <div style="background: #1a1a1a; padding: 18px; border-radius: 12px; margin-bottom: 20px; 
+                    border: 1px solid #333; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; 
+                        border-bottom: 1px solid #333; padding-bottom: 10px;">
+                <span style="color: #ff4444; font-size: 14px;">🔴</span>
+                <span style="font-weight: 600; color: #ffffff; font-size: 14px; letter-spacing: 0.5px;">
+                    LIVE DATA FEED
+                </span>
             </div>
-            <div style="font-size: 12px; color: #666;">
-                Update: {current_time} WIB<br>
-                Saham: {total_stocks} IDX<br>
-                Sumber: Yahoo Finance
+            <div style="font-size: 13px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="color: #888;">🕒 Update:</span>
+                    <span style="color: #ffffff; font-weight: 500;">{current_time}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="color: #888;">📊 Saham:</span>
+                    <span style="color: #4CAF50; font-weight: 600;">{total_stocks} IDX</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: #888;">📡 Sumber:</span>
+                    <span style="color: #ffffff;">Yahoo Finance</span>
+                </div>
+            </div>
+            <div style="margin-top: 12px; background: #2a2a2a; padding: 6px 10px; border-radius: 6px;">
+                <span style="color: #4CAF50; font-size: 11px;">✓ Real-time</span>
+                <span style="color: #666; margin: 0 5px;">•</span>
+                <span style="color: #ffa500; font-size: 11px;">⚡ Live</span>
             </div>
         </div>
         """, unsafe_allow_html=True)
