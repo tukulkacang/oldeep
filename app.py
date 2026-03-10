@@ -479,6 +479,15 @@ def scan_stocks_parallel(stocks_to_scan, scan_function, *args, **kwargs):
     
     return results
 
+# ========== FUNGSI UNTUK RESET SESSION ==========
+
+def reset_session_data():
+    """Reset semua data di session state"""
+    keys_to_reset = ['scan_results', 'enhanced_df', 'watchlist_df', 'display_df', 'df_results']
+    for key in keys_to_reset:
+        if key in st.session_state:
+            del st.session_state[key]
+
 # Config halaman
 st.set_page_config(
     page_title="Screener Saham Indonesia",
@@ -589,6 +598,14 @@ with st.sidebar:
             st.info(f"⚡ Dengan paralel: ±{stocks_count * 0.1 / 60:.1f} menit")
     
     st.markdown("---")
+    
+    # Tombol reset data (opsional)
+    if st.button("🔄 Reset Data", use_container_width=True):
+        reset_session_data()
+        st.success("Data session telah direset!")
+        st.rerun()
+    
+    st.markdown("---")
     st.markdown("### 📌 Info")
     st.markdown("""
     - **Data:** Yahoo Finance + KSEI
@@ -649,6 +666,9 @@ if "Open = Low" in scan_mode:
     
     # Tombol scan
     if st.button("🚀 MULAI SCANNING", type="primary", use_container_width=True):
+        # Reset data lama sebelum scan baru
+        reset_session_data()
+        
         # Tentukan stocks yang akan discan berdasarkan filter
         if filter_type == "Pilih Manual" and selected_stocks:
             stocks_to_scan = selected_stocks
@@ -796,30 +816,51 @@ if "Open = Low" in scan_mode:
                 hide_index=True
             )
             
-            # Visualisasi
-            st.markdown("### 📊 Top 10 Saham")
+            # ========== SIMPAN DATA DI SESSION STATE ==========
+            st.session_state['scan_results'] = df_results
+            st.session_state['enhanced_df'] = enhanced_df
+            st.session_state['display_df'] = display_df
+            st.session_state['watchlist_df'] = None  # Reset watchlist
+            # =================================================
+            
+            # ========== VISUALISASI TOP 10 DENGAN URUTAN YANG SAMA ==========
+            st.markdown("### 📊 Top 10 Saham (Urut Berdasarkan Frekuensi)")
+            
+            # Ambil top 10 dan pastikan urutannya tetap
+            top10_df = df_results.head(10).copy()
+            
+            # Buat grafik dengan urutan sesuai frekuensi (bukan alfabet)
             fig = px.bar(
-                df_results.head(10),
+                top10_df,
                 x='saham',
                 y='frekuensi',
                 title="10 Saham dengan Frekuensi Tertinggi",
                 labels={'saham': 'Saham', 'frekuensi': 'Frekuensi'},
                 color='probabilitas',
-                color_continuous_scale='Viridis'
+                color_continuous_scale='Viridis',
+                category_orders={"saham": top10_df['saham'].tolist()}  # <-- INI KUNCI! Urutan sesuai data
             )
-            fig.update_layout(height=500)
+            fig.update_layout(
+                height=500,
+                xaxis={'categoryorder': 'array', 'categoryarray': top10_df['saham'].tolist()},  # Backup
+                xaxis_title="Saham (Urut dari frekuensi tertinggi)",
+                yaxis_title="Frekuensi"
+            )
             st.plotly_chart(fig, use_container_width=True)
+            
+            # Tampilkan urutan top 10 dalam teks biar jelas
+            st.caption(f"Urutan: {' → '.join(top10_df['saham'].tolist())}")
             
             # ========== ANALISIS AI ==========
             st.markdown("## 🤖 Analisis AI")
-            st.markdown("Analisis untuk top 5 saham dengan pola terbaik:")
+            st.markdown("Analisis untuk top 5 saham dengan pola terbaik (sesuai urutan di atas):")
             
             for idx, (i, row) in enumerate(df_results.head(5).iterrows()):
-                # Panggil analisis AI (sekarang udah diisi beneran)
+                # Panggil analisis AI
                 analysis = analyze_pattern(row.to_dict())
                 
                 # Tampilkan dengan expander
-                with st.expander(f"📊 {row['saham']} - {get_stock_level(row['saham'])} | Prob: {row['probabilitas']:.1f}%"):
+                with st.expander(f"📊 {row['saham']} - {get_stock_level(row['saham'])} | Prob: {row['probabilitas']:.1f}% (Rank #{idx+1})"):
                     col1, col2, col3, col4 = st.columns(4)
                     with col1:
                         st.metric("🎯 Probabilitas", f"{row['probabilitas']:.1f}%")
@@ -850,7 +891,10 @@ if "Open = Low" in scan_mode:
                 top_n = st.number_input("📊 Jumlah saham", 5, 30, 15, key="top_n")
             
             # Filter berdasarkan gain minimal (pake nilai asli)
-            df_watchlist = enhanced_df[enhanced_df['Gain_Val'] >= min_gain_filter].copy()
+            if 'enhanced_df' in st.session_state:
+                df_watchlist = st.session_state['enhanced_df'][st.session_state['enhanced_df']['Gain_Val'] >= min_gain_filter].copy()
+            else:
+                df_watchlist = enhanced_df[enhanced_df['Gain_Val'] >= min_gain_filter].copy()
             
             if len(df_watchlist) > 0:
                 # Hitung skor gabungan
@@ -909,6 +953,11 @@ if "Open = Low" in scan_mode:
                 
                 # Tampilkan dataframe
                 watchlist_df = pd.DataFrame(watchlist_data)
+                
+                # ========== SIMPAN WATCHLIST DI SESSION STATE ==========
+                st.session_state['watchlist_df'] = watchlist_df
+                # ======================================================
+                
                 st.dataframe(
                     watchlist_df,
                     use_container_width=True,
@@ -923,16 +972,21 @@ if "Open = Low" in scan_mode:
                 
                 with tab_exp1:
                     st.markdown("### Download Watchlist")
-                    create_download_buttons(watchlist_df, "watchlist", "watchlist_tab")
-                    st.info("💡 BC=Blue Chip, SL=Second Liner, TL=Third Liner | Fokus 🔥 PRIORITAS dengan 🔥 UT/ST. Waspadai ⚠️ FCA.")
+                    if 'watchlist_df' in st.session_state and st.session_state['watchlist_df'] is not None:
+                        create_download_buttons(st.session_state['watchlist_df'], "watchlist", "watchlist_tab")
+                        st.info("💡 BC=Blue Chip, SL=Second Liner, TL=Third Liner | Fokus 🔥 PRIORITAS dengan 🔥 UT/ST. Waspadai ⚠️ FCA.")
+                    else:
+                        st.warning("Belum ada data watchlist. Generate watchlist dulu ya bro!")
                 
                 with tab_exp2:
                     st.markdown("### Download Hasil Scanning")
-                    create_download_buttons(display_df, "scan", "scan_tab")
+                    if 'display_df' in st.session_state:
+                        create_download_buttons(st.session_state['display_df'], "scan", "scan_tab")
+                    else:
+                        st.warning("Belum ada data scanning. Scan dulu ya bro!")
                     
             else:
                 st.warning(f"Tidak ada saham dengan gain minimal {min_gain_filter}%")
-                    
         else:
             st.markdown(
                 """
@@ -969,6 +1023,9 @@ elif "Low Float" in scan_mode:
     use_parallel = st.checkbox("Gunakan Parallel Scanning (LEBIH CEPAT)", value=True)
     
     if st.button("🚀 SCAN LOW FLOAT", type="primary", use_container_width=True):
+        # Reset data lama
+        reset_session_data()
+        
         # Tentukan stocks berdasarkan filter
         selected_levels = []
         if scan_blue:
@@ -1082,6 +1139,11 @@ elif "Low Float" in scan_mode:
                 hide_index=True
             )
             
+            # ========== SIMPAN DATA DI SESSION STATE ==========
+            st.session_state['low_float_results'] = df_results
+            st.session_state['low_float_enriched'] = enriched_df
+            # ==================================================
+            
             # Detail
             st.markdown("### 🔍 Detail Free Float")
             for _, row in df_results.head(5).iterrows():
@@ -1112,17 +1174,20 @@ elif "Low Float" in scan_mode:
                 )
                 st.plotly_chart(fig, use_container_width=True)
             
-            # Export dengan TABS juga biar konsisten
+            # Export dengan TABS
             st.markdown("## 📥 Export Data")
-            tab_exp1, tab_exp2 = st.tabs(["📊 Hasil Low Float", "📋 Watchlist (Opsional)"])
+            tab_exp1, tab_exp2 = st.tabs(["📊 Hasil Low Float", "📋 Info"])
             
             with tab_exp1:
                 st.markdown("### Download Hasil Low Float")
-                create_download_buttons(enriched_df, "low_float", "low_float_tab")
+                if 'low_float_enriched' in st.session_state:
+                    create_download_buttons(st.session_state['low_float_enriched'], "low_float", "low_float_tab")
+                else:
+                    create_download_buttons(enriched_df, "low_float", "low_float_tab")
             
             with tab_exp2:
-                st.markdown("### Download Watchlist (buat sendiri)")
-                st.info("Gunakan hasil di atas untuk bikin watchlist manual")
+                st.markdown("### Info")
+                st.info("Gunakan hasil di atas untuk analisis lebih lanjut")
                 
         else:
             st.markdown(
@@ -1143,6 +1208,8 @@ st.markdown(
         <p>BC=Blue Chip, SL=Second Liner, TL=Third Liner | FF=Free Float | FCA=Full Call Auction</p>
         <p>🔥 UT/ST=Ultra/Sangat Tinggi ⚡ TG=Tinggi 📊 SD=Sedang 📉 RD=Rendah</p>
         <p>⚡ Parallel scanning aktif: 900+ saham jadi ±1.5 menit!</p>
+        <p>💾 Data tersimpan di session - bisa download kapan aja tanpa scan ulang</p>
+        <p>📊 Top 10 diurutkan berdasarkan frekuensi, sama persis dengan tabel & analisis AI</p>
     </div>
     """,
     unsafe_allow_html=True
