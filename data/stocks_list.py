@@ -1,4 +1,7 @@
-# List lengkap saham Indonesia dari data kamu
+# data/stocks_list.py
+# List lengkap saham Indonesia (900+ saham)
+# Update terbaru 2026
+
 STOCKS_LIST = [
     "AALI", "ABBA", "ABDA", "ABMM", "ACES", "ACST", "ADES", "ADHI", "AISA", "AKKU",
     "AKPI", "AKRA", "AKSI", "ALDO", "ALKA", "ALMI", "ALTO", "AMAG", "AMFG", "AMIN",
@@ -98,7 +101,7 @@ STOCKS_LIST = [
     "AHAP", "AIMS", "PNSE", "POLY", "POOL", "PPRO"
 ]
 
-# Dictionary untuk mapping sektor (akan diisi bertahap)
+# Optional: Mapping sektor untuk beberapa saham terkenal
 SECTOR_MAPPING = {
     "AALI": "Agriculture",
     "ADRO": "Energy",
@@ -139,12 +142,19 @@ SECTOR_MAPPING = {
     "WSKT": "Construction",
 }
 
-# Helper function untuk grouping
 def get_sector(stock_code):
-    """Mendapatkan sektor dari kode saham"""
+    """Mendapatkan sektor dari kode saham (opsional)"""
     return SECTOR_MAPPING.get(stock_code, "Others")
 
-# Helper function untuk validasi
 def is_valid_stock(stock_code):
     """Validasi apakah kode saham ada di list"""
     return stock_code in STOCKS_LIST
+
+def get_stock_count():
+    """Mengembalikan jumlah total saham"""
+    return len(STOCKS_LIST)
+
+# Untuk testing
+if __name__ == "__main__":
+    print(f"Total saham: {get_stock_count()}")
+    print(f"Contoh: BBCA sektor {get_sector('BBCA')}")
