@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from datetime import datetime, timedelta
+from datetime import datetime
 import time
 import sqlite3
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -10,7 +10,12 @@ import yfinance as yf
 import warnings
 warnings.filterwarnings('ignore')
 
-# ─── DATABASE SETUP ──────────────────────────────────────────
+# ─── AMBIL TAHUN DAN WAKTU SEKARANG ─────────────────
+current_year = datetime.now().year
+current_time = datetime.now().strftime("%d %b %Y %H:%M")
+current_date = datetime.now().strftime("%d %B %Y")
+
+# ─── DATABASE SETUP ─────────────────────────────────
 def init_database():
     """Inisialisasi database SQLite"""
     conn = sqlite3.connect('radar_aksara.db')
@@ -32,7 +37,7 @@ def init_database():
 # Panggil init database
 init_database()
 
-# ─── DATA FETCHER ─────────────────────────────────────
+# ─── DATA FETCHER ───────────────────────────────────
 class DataFetcher:
     """Kelas untuk mengambil data saham real-time"""
     
@@ -122,24 +127,28 @@ class PatternScanner:
     """Scanner untuk berbagai pola saham"""
     
     @staticmethod
-    def scan_open_low_pattern(symbol, days=30, min_gain=5):
-        """Scan pola Open = Low dengan parallel processing"""
+    def scan_open_low_pattern(symbol, days=30, min_gain=5, lookahead=5):
+        """
+        Scan pola Open = Low (PERSIS SAMA, tanpa toleransi)
+        """
         try:
             df = DataFetcher.get_stock_data(symbol, period=f"{days}d")
-            if df is None or len(df) < 5:
+            if df is None or len(df) < lookahead + 5:
                 return None
             
             patterns = []
             gains = []
             
-            for i in range(1, len(df)):
-                # Cek apakah Open ≈ Low (dengan toleransi 0.5%)
-                if abs(df['Open'].iloc[i] - df['Low'].iloc[i]) / df['Low'].iloc[i] < 0.005:
+            for i in range(1, len(df) - lookahead):
+                # CEK PERSIS: Open harus SAMA DENGAN Low
+                if df['Open'].iloc[i] == df['Low'].iloc[i]:
                     patterns.append(df.index[i])
                     
-                    # Hitung gain 5 hari ke depan
-                    if i + 5 < len(df):
-                        gain = (df['Close'].iloc[i+5] / df['Close'].iloc[i] - 1) * 100
+                    # Hitung gain dalam periode lookahead
+                    future_prices = df['High'].iloc[i+1:i+lookahead+1]
+                    if not future_prices.empty:
+                        max_future = future_prices.max()
+                        gain = (max_future / df['Close'].iloc[i] - 1) * 100
                         gains.append(gain)
             
             if patterns and gains:
@@ -279,17 +288,19 @@ class AIAnalyzer:
             </ul>
             
             <h4>💡 Insight:</h4>
-            <p>Saham <b>{stock_data['saham']}</b> menunjukkan pola Open=Low sebanyak <b>{stock_data['frekuensi']}</b>x 
+            <p>Saham <b>{stock_data['saham']}</b> menunjukkan pola <b>Open = Low EXACT</b> sebanyak <b>{stock_data['frekuensi']}</b>x 
             dengan probabilitas keberhasilan <b>{stock_data['probabilitas']:.1f}%</b> dan rata-rata gain 
             <b>{stock_data['rata_rata_kenaikan']:.1f}%</b>.</p>
             
             <h4>🎯 Trading Strategy:</h4>
             <ul>
-                <li><b>Entry:</b> Harga mendekati low hari ini</li>
-                <li><b>Target 1:</b> {stock_data['rata_rata_kenaikan']:.1f}% ({current_price * (1 + stock_data['rata_rata_kenaikan']/100):,.0f})</li>
-                <li><b>Target 2:</b> {stock_data['rata_rata_kenaikan']*1.5:.1f}% ({current_price * (1 + stock_data['rata_rata_kenaikan']*1.5/100):,.0f})</li>
+                <li><b>Entry:</b> Saat Open = Low terjadi</li>
+                <li><b>Target 1:</b> {stock_data['rata_rata_kenaikan']:.1f}% (Rp {current_price * (1 + stock_data['rata_rata_kenaikan']/100):,.0f})</li>
+                <li><b>Target 2:</b> {stock_data['rata_rata_kenaikan']*1.5:.1f}% (Rp {current_price * (1 + stock_data['rata_rata_kenaikan']*1.5/100):,.0f})</li>
                 <li><b>Stop Loss:</b> -3% dari entry</li>
             </ul>
+            
+            <p><i>✨ Pola exact Open=Low adalah sinyal strong karena menunjukkan support kuat di level tersebut</i></p>
         </div>
         """
         
@@ -341,7 +352,7 @@ class StocksList:
 # ─── MAIN APP ───────────────────────────────────────
 def main():
     st.set_page_config(
-        page_title="Radar Aksara",
+        page_title=f"Radar Aksara {current_year} - Exact Open=Low Scanner",
         page_icon="📊",
         layout="wide",
         initial_sidebar_state="expanded"
@@ -358,6 +369,36 @@ def main():
         text-align: center;
         margin-bottom: 30px;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .exact-badge {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: bold;
+        display: inline-block;
+        margin-left: 10px;
+    }
+    .live-badge {
+        background: #ff4444;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 10px;
+        font-weight: bold;
+        animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.7; }
+        100% { opacity: 1; }
+    }
+    .update-time {
+        font-size: 11px;
+        color: #888;
+        text-align: right;
+        margin-top: 5px;
     }
     .metric-card {
         background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
@@ -379,27 +420,61 @@ def main():
         transform: translateY(-2px);
         box-shadow: 0 5px 15px rgba(0,0,0,0.2);
     }
+    .footer {
+        text-align: center;
+        font-size: 11px;
+        color: #666;
+        padding: 20px 0;
+        border-top: 1px solid #eee;
+        margin-top: 30px;
+    }
     </style>
     """, unsafe_allow_html=True)
     
-    # Header
-    st.markdown("""
+    # Header dengan LIVE badge dan update time
+    st.markdown(f"""
     <div class="main-header">
-        <h1>📊 RADAR AKSARA</h1>
-        <p>IDX Stock Screener dengan Analisis Real-time</p>
-        <p style="font-size: 14px; opacity: 0.9;">📈 Open=Low Scanner | 🔍 Low Float Scanner | 🤖 AI Analysis</p>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h1>📊 RADAR AKSARA {current_year} <span class="exact-badge">EXACT MATCH</span></h1>
+                <p>IDX Stock Screener - Open PERSIS SAMA dengan Low</p>
+            </div>
+            <div style="text-align: right;">
+                <span class="live-badge">🔴 LIVE</span>
+                <div style="font-size: 12px; color: white; margin-top: 5px;">
+                    {current_time} WIB
+                </div>
+            </div>
+        </div>
+        <p style="font-size: 14px; opacity: 0.9; margin-top: 10px;">
+            📈 Exact Pattern Scanner | 🔍 Low Float Scanner | 🤖 AI Analysis
+        </p>
     </div>
     """, unsafe_allow_html=True)
     
     # Sidebar
     with st.sidebar:
         st.image("https://img.icons8.com/color/96/000000/stocks.png", width=100)
-        st.markdown("## 🎯 Control Panel")
+        st.markdown(f"## 🎯 Control Panel {current_year}")
+        
+        # Live indicator di sidebar
+        st.markdown(f"""
+        <div style="background: #e8f4fd; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <span style="color: #ff4444; font-size: 20px;">●</span>
+                <span style="font-weight: bold;">LIVE DATA</span>
+            </div>
+            <div style="font-size: 11px; color: #666;">
+                Update terakhir: {current_time} WIB<br>
+                Sumber: Yahoo Finance
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
         
         # Mode selection
         mode = st.radio(
             "Pilih Mode Scanner",
-            ["📈 Open = Low Scanner", "🔍 Low Float Scanner", "📊 Dashboard"]
+            ["📈 Open = Low EXACT Scanner", "🔍 Low Float Scanner", "📊 Dashboard"]
         )
         
         st.markdown("---")
@@ -422,28 +497,39 @@ def main():
         # Info
         st.markdown("### ℹ️ Info")
         st.info("""
-        **Cara Penggunaan:**
-        1. Pilih mode scanner
-        2. Atur parameter
-        3. Klik tombol START
-        4. Lihat hasil analisis
+        **🎯 Exact Match:**
+        - Open harus PERSIS SAMA dengan Low
+        - Tanpa toleransi (0% selisih)
+        - Sinyal lebih kuat & valid
         """)
         
         st.markdown("---")
-        st.caption("© 2024 Radar Aksara • Data dari Yahoo Finance")
+        
+        # FOOTER SIDEBAR - PAKE current_year
+        st.caption(f"© {current_year} Radar Aksara • Data real-time dari Yahoo Finance")
+        st.caption(f"🕒 Last sync: {current_time} WIB")
     
     # Main content based on mode
-    if "Open = Low" in mode:
-        show_open_low_scanner(filter_type, selected_sectors)
+    if "EXACT" in mode:
+        show_exact_open_low_scanner(filter_type, selected_sectors)
     elif "Low Float" in mode:
         show_low_float_scanner(filter_type, selected_sectors)
     else:
         show_dashboard()
+    
+    # FOOTER HALAMAN UTAMA
+    st.markdown("---")
+    st.markdown(f"""
+    <div class="footer">
+        © {current_year} Radar Aksara • Data real-time dari Yahoo Finance<br>
+        Last update: {current_time} WIB • ⚠️ Bukan rekomendasi investasi
+    </div>
+    """, unsafe_allow_html=True)
 
-# ─── OPEN = LOW SCANNER ─────────────────────────────
-def show_open_low_scanner(filter_type, selected_sectors):
-    st.header("📈 Open = Low Scanner")
-    st.markdown("Mendeteksi saham dengan pola Open sama dengan Low (potensi reversal)")
+# ─── EXACT OPEN = LOW SCANNER ───────────────────────
+def show_exact_open_low_scanner(filter_type, selected_sectors):
+    st.header("📈 Open = Low EXACT Scanner")
+    st.markdown(f"Mendeteksi saham dengan **Open PERSIS SAMA dengan Low** (0% selisih) - Sinyal Strong! • Update: {current_time} WIB")
     
     # Parameters
     col1, col2, col3 = st.columns(3)
@@ -453,18 +539,10 @@ def show_open_low_scanner(filter_type, selected_sectors):
     with col2:
         min_gain = st.slider("Minimal Gain (%)", 1, 20, 5, help="Target kenaikan minimal")
     with col3:
-        limit = st.number_input("Limit Hasil", 5, 50, 20, help="Jumlah maksimal saham yang ditampilkan")
-    
-    # Advanced options
-    with st.expander("⚙️ Advanced Options"):
-        col1, col2 = st.columns(2)
-        with col1:
-            tolerance = st.slider("Toleransi Open=Low (%)", 0.1, 2.0, 0.5, step=0.1) / 100
-        with col2:
-            lookahead = st.slider("Hari Lookahead", 3, 10, 5, help="Jumlah hari untuk menghitung gain")
+        lookahead = st.slider("Hari Lookahead", 3, 10, 5, help="Jumlah hari untuk menghitung gain setelah pola")
     
     # Start button
-    if st.button("🚀 MULAI SCAN", type="primary", use_container_width=True):
+    if st.button("🚀 MULAI SCAN EXACT", type="primary", use_container_width=True):
         # Get stocks based on filter
         if filter_type == "Semua Saham":
             stocks = StocksList.get_all_stocks()
@@ -472,13 +550,13 @@ def show_open_low_scanner(filter_type, selected_sectors):
             stocks = []
             for sector in selected_sectors:
                 stocks.extend(StocksList.get_stocks_by_sector(sector))
-            stocks = list(set(stocks))  # Remove duplicates
+            stocks = list(set(stocks))
         
         if not stocks:
             st.warning("Tidak ada saham yang dipilih!")
             return
         
-        st.info(f"📊 Memproses {len(stocks)} saham...")
+        st.info(f"📊 Memproses {len(stocks)} saham... (Mencari Open = Low exact match)")
         
         # Progress bars
         progress_bar = st.progress(0)
@@ -490,7 +568,7 @@ def show_open_low_scanner(filter_type, selected_sectors):
         
         with ThreadPoolExecutor(max_workers=10) as executor:
             futures = {
-                executor.submit(scanner.scan_open_low_pattern, stock, days, min_gain): stock 
+                executor.submit(scanner.scan_open_low_pattern, stock, days, min_gain, lookahead): stock 
                 for stock in stocks
             }
             
@@ -506,7 +584,7 @@ def show_open_low_scanner(filter_type, selected_sectors):
                 # Update progress
                 progress = (i + 1) / len(stocks)
                 progress_bar.progress(progress)
-                status_text.text(f"Processing: {i+1}/{len(stocks)} stocks")
+                status_text.text(f"Scanning: {i+1}/{len(stocks)} saham")
         
         progress_bar.empty()
         status_text.empty()
@@ -514,9 +592,14 @@ def show_open_low_scanner(filter_type, selected_sectors):
         if results:
             # Create DataFrame and sort
             df = pd.DataFrame(results)
-            df = df.sort_values(['probabilitas', 'rata_rata_kenaikan'], ascending=False).head(limit)
+            df = df.sort_values(['probabilitas', 'rata_rata_kenaikan'], ascending=False)
             
-            st.success(f"✅ Ditemukan {len(df)} saham dengan pola Open=Low!")
+            st.success(f"""
+            ✅ **Ditemukan {len(df)} saham dengan pola Open = Low EXACT!**
+            
+            Dari {len(stocks)} saham yang discan, hanya {len(df)} yang memiliki pola Open PERSIS SAMA dengan Low.
+            Ini adalah sinyal strong karena exact match!
+            """)
             
             # Tabs for different views
             tab1, tab2, tab3 = st.tabs(["📋 Hasil Scan", "📊 Visualisasi", "🤖 Analisis AI"])
@@ -537,12 +620,12 @@ def show_open_low_scanner(filter_type, selected_sectors):
                 col1, col2 = st.columns(2)
                 with col1:
                     csv = df.to_csv(index=False)
-                    st.download_button("📥 Download CSV", csv, "scan_results.csv", "text/csv", use_container_width=True)
+                    st.download_button("📥 Download CSV", csv, f"exact_pattern_{current_date}.csv", "text/csv", use_container_width=True)
                 with col2:
                     # Excel export
-                    df.to_excel("scan_results.xlsx", index=False)
-                    with open("scan_results.xlsx", "rb") as f:
-                        st.download_button("📥 Download Excel", f, "scan_results.xlsx", use_container_width=True)
+                    df.to_excel(f"exact_pattern_{current_date}.xlsx", index=False)
+                    with open(f"exact_pattern_{current_date}.xlsx", "rb") as f:
+                        st.download_button("📥 Download Excel", f, f"exact_pattern_{current_date}.xlsx", use_container_width=True)
             
             with tab2:
                 # Charts
@@ -595,34 +678,76 @@ def show_open_low_scanner(filter_type, selected_sectors):
                 )
                 
                 fig.update_layout(height=800, showlegend=False,
-                                title_text="Analisis Visual Hasil Scan")
+                                title_text=f"Analisis Visual - Exact Pattern • {current_date}")
                 fig.update_xaxes(tickangle=45)
                 
                 st.plotly_chart(fig, use_container_width=True)
                 
                 # Statistics
-                st.subheader("📈 Statistik Keseluruhan")
+                st.subheader("📈 Statistik Exact Pattern")
                 col1, col2, col3, col4 = st.columns(4)
                 with col1:
-                    st.metric("Rata-rata Probabilitas", f"{df['probabilitas'].mean():.1f}%")
+                    st.metric("Total Exact Patterns", f"{df['frekuensi'].sum()}")
                 with col2:
-                    st.metric("Rata-rata Gain", f"{df['rata_rata_kenaikan'].mean():.1f}%")
+                    st.metric("Rata-rata Probabilitas", f"{df['probabilitas'].mean():.1f}%")
                 with col3:
-                    st.metric("Total Pattern", f"{df['frekuensi'].sum()}")
+                    st.metric("Rata-rata Gain", f"{df['rata_rata_kenaikan'].mean():.1f}%")
                 with col4:
-                    st.metric("Saham Unique", len(df))
+                    st.metric("Saham Unik", len(df))
             
             with tab3:
-                st.subheader("🤖 Analisis AI untuk Top 5 Saham")
+                st.subheader("🤖 Analisis AI untuk Semua Exact Pattern")
                 
-                for idx, row in df.head(5).iterrows():
-                    with st.expander(f"📈 {row['saham']} - Prob: {row['probabilitas']:.1f}% | Gain: {row['rata_rata_kenaikan']:.1f}%"):
+                # Sort by best probability
+                df_sorted = df.sort_values('probabilitas', ascending=False)
+                
+                for idx, row in df_sorted.iterrows():
+                    with st.expander(f"📈 {row['saham']} - Prob: {row['probabilitas']:.1f}% | Gain: {row['rata_rata_kenaikan']:.1f}% (Exact Match)"):
                         # AI Analysis
                         analysis = AIAnalyzer.analyze_pattern(row)
                         st.markdown(analysis, unsafe_allow_html=True)
                         
+                        # Chart pattern
+                        st.subheader("📊 Chart Pattern")
+                        price_data = DataFetcher.get_stock_data(row['saham'], period=f"{days}d")
+                        if price_data is not None:
+                            # Mark the exact pattern points
+                            fig_price = go.Figure()
+                            
+                            # Candlestick
+                            fig_price.add_trace(go.Candlestick(
+                                x=price_data.index,
+                                open=price_data['Open'],
+                                high=price_data['High'],
+                                low=price_data['Low'],
+                                close=price_data['Close'],
+                                name="Price"
+                            ))
+                            
+                            # Mark pattern points
+                            pattern_dates = []
+                            for i in range(1, len(price_data)):
+                                if price_data['Open'].iloc[i] == price_data['Low'].iloc[i]:
+                                    pattern_dates.append(price_data.index[i])
+                            
+                            if pattern_dates:
+                                fig_price.add_trace(go.Scatter(
+                                    x=pattern_dates,
+                                    y=[price_data['Low'][date] for date in pattern_dates],
+                                    mode='markers',
+                                    marker=dict(size=10, color='red', symbol='circle'),
+                                    name='Exact Pattern'
+                                ))
+                            
+                            fig_price.update_layout(
+                                title=f"{row['saham']} - {days} Hari Chart dengan Exact Pattern",
+                                height=400,
+                                xaxis_rangeslider_visible=False
+                            )
+                            st.plotly_chart(fig_price, use_container_width=True)
+                        
                         # Fundamental data
-                        st.subheader("📊 Data Fundamental")
+                        st.subheader("📋 Data Fundamental")
                         fund_data = DataFetcher.get_fundamental_data(row['saham'])
                         
                         col1, col2, col3 = st.columns(3)
@@ -633,12 +758,21 @@ def show_open_low_scanner(filter_type, selected_sectors):
                         with col3:
                             st.metric("Volume Rata²", f"{fund_data['volume_avg']/1e6:.1f}M")
         else:
-            st.warning("Tidak ada saham yang memenuhi kriteria. Coba turunkan minimal gain atau perpanjang periode.")
+            st.warning("""
+            ❌ **Tidak ditemukan saham dengan pola Open = Low EXACT!**
+            
+            Coba:
+            - Perpanjang periode analisis
+            - Kurangi minimal gain
+            - Scan lebih banyak saham
+            
+            *Exact match memang jarang terjadi, tapi sinyalnya lebih kuat!*
+            """)
 
 # ─── LOW FLOAT SCANNER ──────────────────────────────
 def show_low_float_scanner(filter_type, selected_sectors):
     st.header("🔍 Low Float Scanner")
-    st.markdown("Mendeteksi saham dengan free float rendah dan potensi volatilitas tinggi")
+    st.markdown(f"Mendeteksi saham dengan free float rendah dan potensi volatilitas tinggi • Update: {current_time} WIB")
     
     col1, col2 = st.columns(2)
     with col1:
@@ -685,7 +819,7 @@ def show_low_float_scanner(filter_type, selected_sectors):
                 
                 # Export
                 csv = df.to_csv(index=False)
-                st.download_button("📥 Download CSV", csv, "low_float_results.csv", "text/csv")
+                st.download_button("📥 Download CSV", csv, f"low_float_{current_date}.csv", "text/csv")
             
             with tab2:
                 col1, col2 = st.columns(2)
@@ -698,7 +832,7 @@ def show_low_float_scanner(filter_type, selected_sectors):
                               hole=0.4,
                               marker_colors=['red', 'orange', 'yellow', 'green', 'blue'])
                     ])
-                    fig_pie.update_layout(title="Distribusi Kategori Free Float")
+                    fig_pie.update_layout(title=f"Distribusi Kategori Free Float • {current_date}")
                     st.plotly_chart(fig_pie, use_container_width=True)
                 
                 with col2:
@@ -717,7 +851,7 @@ def show_low_float_scanner(filter_type, selected_sectors):
                                   ))
                     ])
                     fig_scatter.update_layout(
-                        title="Free Float vs Volatilitas",
+                        title=f"Free Float vs Volatilitas • {current_date}",
                         xaxis_title="Free Float (%)",
                         yaxis_title="Volatilitas (%)"
                     )
@@ -756,8 +890,8 @@ def show_low_float_scanner(filter_type, selected_sectors):
 
 # ─── DASHBOARD ──────────────────────────────────────
 def show_dashboard():
-    st.header("📊 Dashboard")
-    st.markdown("Ringkasan market dan rekomendasi hari ini")
+    st.header(f"📊 Dashboard • {current_date}")
+    st.markdown(f"Ringkasan market dan rekomendasi hari ini • Update: {current_time} WIB")
     
     # Market overview
     col1, col2, col3, col4 = st.columns(4)
@@ -790,13 +924,13 @@ def show_dashboard():
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown("**📈 Top Open=Low Candidates**")
+        st.markdown("**📈 Top Exact Open=Low Candidates**")
         stocks = StocksList.get_all_stocks()[:10]
         
         scanner = PatternScanner()
         results = []
         for stock in stocks:
-            result = scanner.scan_open_low_pattern(stock, days=30, min_gain=5)
+            result = scanner.scan_open_low_pattern(stock, days=30, min_gain=5, lookahead=5)
             if result:
                 results.append(result)
         
@@ -809,7 +943,7 @@ def show_dashboard():
                 - **{row['saham']}**: {row['probabilitas']:.1f}% prob, {row['rata_rata_kenaikan']:.1f}% gain
                 """)
         else:
-            st.info("Belum ada data scan")
+            st.info("Belum ada exact pattern ditemukan")
     
     with col2:
         st.markdown("**🔍 Top Low Float Candidates**")
