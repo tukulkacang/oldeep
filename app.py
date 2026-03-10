@@ -14,6 +14,60 @@ from modules.low_float_scanner import scan_low_float, get_low_float_summary
 from modules.ai_analyzer import analyze_pattern, analyze_low_float, predict_next_pattern, get_market_context
 from utils.exporters import export_to_excel, format_number
 
+# ========== DATA TINGKATAN SAHAM ==========
+# Berdasarkan kapitalisasi pasar (market cap)
+# Blue Chip: > Rp10 T
+# Second Liner: Rp500 M - Rp10 T
+# Third Liner: < Rp1 T
+
+BLUE_CHIP_STOCKS = [
+    'BBCA', 'BBRI', 'BMRI', 'BBNI', 'BTPS', 'BRIS',  # Perbankan
+    'TLKM', 'ISAT', 'EXCL', 'TOWR', 'MTEL',  # Telekomunikasi
+    'UNVR', 'ICBP', 'INDF', 'KLBF', 'GGRM', 'HMSP',  # Consumer
+    'ASII', 'UNTR', 'ADRO', 'BYAN', 'PTBA', 'ITMG',  # Otomotif & Energi
+    'CPIN', 'JPFA', 'MAIN', 'SIDO', 'ULTJ',  # Consumer lain
+    'SMGR', 'INTP', 'SMCB',  # Semen
+    'PGAS', 'MEDC', 'ELSA',  # Energi
+    'ANTM', 'INCO', 'MDKA', 'HRUM', 'BRPT', 'TPIA',  # Mining & Kimia
+    'WIKA', 'PTPP', 'WSKT', 'ADHI', 'JSMR', 'TLKM',  # Konstruksi
+]
+
+SECOND_LINER_STOCKS = [
+    'AKRA', 'INKP', 'BUMI', 'PTRO', 'DOID', 'TINS', 'BRMS', 'DKFT',  # Energi & Mining
+    'BMTR', 'MAPI', 'ERAA', 'ACES', 'MIKA', 'SILO', 'HEAL', 'PRAY',  # Retail & Healthcare
+    'CLEO', 'ROTI', 'MYOR', 'GOOD', 'SKBM', 'SKLT', 'STTP',  # Consumer
+    'WSBP', 'PBSA', 'MTFN', 'BKSL', 'SMRA', 'CTRA', 'BSDE', 'PWON',  # Properti
+    'LPKR', 'LPCK', 'DILD', 'RDTX', 'MREI', 'PZZA', 'MAPB', 'DMAS',  # Properti & Lainnya
+    'LMPI', 'ARNA', 'TOTO', 'MLIA', 'INTD', 'IKAI', 'JECC', 'KBLI',  # Industri
+    'KBLM', 'VOKS', 'UNIT', 'INAI', 'IMPC', 'ASGR', 'POWR', 'RAJA',  # Jasa & Trading
+    'PJAA', 'SAME', 'SCCO', 'SPMA', 'SRSN', 'TALF', 'TRST', 'TSPC',  # Manufaktur
+    'UNIC', 'YPAS',  # Lainnya
+]
+
+# Third Liner = sisanya (akan otomatis terdeteksi)
+
+def get_stock_level(stock_code):
+    """Mengembalikan tingkatan saham"""
+    if stock_code in BLUE_CHIP_STOCKS:
+        return '💎 Blue Chip'
+    elif stock_code in SECOND_LINER_STOCKS:
+        return '📈 Second Liner'
+    else:
+        return '🎯 Third Liner'
+
+def get_stocks_by_level(levels):
+    """Mengembalikan daftar saham berdasarkan tingkatan yang dipilih"""
+    result = []
+    if 'Blue Chip' in levels:
+        result += BLUE_CHIP_STOCKS
+    if 'Second Liner' in levels:
+        result += SECOND_LINER_STOCKS
+    if 'Third Liner' in levels or len(levels) == 0:
+        # Third Liner adalah semua saham yang tidak ada di Blue Chip dan Second Liner
+        third_liner = [s for s in STOCKS_LIST if s not in BLUE_CHIP_STOCKS and s not in SECOND_LINER_STOCKS]
+        result += third_liner
+    return list(set(result))  # Hilangkan duplikat
+
 # ========== DATA PEMEGANG SAHAM (Update Maret 2026) ==========
 # Sumber: KSEI/BEI per 27 Februari 2026
 # Hanya menampilkan pemegang yang ADA DI FREE FLOAT (bukan pengendali/founder)
@@ -411,7 +465,7 @@ st.markdown("""
 
 # Title
 st.markdown('<p class="main-header">📊 Screener Saham Indonesia</p>', unsafe_allow_html=True)
-st.markdown('<p class="info-text">Scanner Open=Low & Low Float dengan Data Free Float + FCA (Full Call Auction)</p>', unsafe_allow_html=True)
+st.markdown('<p class="info-text">Scanner Open=Low & Low Float dengan Filter Blue Chip, Second Liner, Third Liner</p>', unsafe_allow_html=True)
 
 # Sidebar
 with st.sidebar:
@@ -428,26 +482,41 @@ with st.sidebar:
     st.markdown("### 🎯 Filter Saham")
     filter_type = st.radio(
         "Tipe Filter:",
-        ["Semua Saham", "Pilih Manual"],
+        ["Semua Saham", "Pilih Manual", "Filter Tingkatan"],
         index=0
     )
     
     selected_stocks = []
+    selected_levels = []
+    
     if filter_type == "Pilih Manual":
         selected_stocks = st.multiselect(
             "Pilih Saham:",
             options=STOCKS_LIST,
             default=[]
         )
+    elif filter_type == "Filter Tingkatan":
+        selected_levels = st.multiselect(
+            "Pilih Tingkatan Saham:",
+            ["Blue Chip", "Second Liner", "Third Liner"],
+            default=["Blue Chip", "Second Liner", "Third Liner"],
+            help="Blue Chip: > Rp10T | Second Liner: Rp500M-Rp10T | Third Liner: < Rp1T"
+        )
+        
+        # Tampilkan estimasi jumlah dan waktu
+        if selected_levels:
+            stocks_count = len(get_stocks_by_level(selected_levels))
+            est_time = stocks_count * 0.5 / 60
+            st.info(f"📊 {stocks_count} saham | ⏱️ ±{est_time:.1f} menit")
     
     st.markdown("---")
     st.markdown("### 📌 Info")
     st.markdown("""
     - **Data:** Yahoo Finance + KSEI
-    - **Free Float:** % saham beredar
-    - **Pemegang:** Hanya di free float
-    - **FCA:** Saham Papan Pemantauan Khusus
-    - **Update FCA:** Berdasarkan BEI
+    - **Blue Chip:** 💎 > Rp10T
+    - **Second Liner:** 📈 Rp500M-Rp10T
+    - **Third Liner:** 🎯 < Rp1T
+    - **FCA:** ⚠️ Papan Pemantauan
     """)
     
     st.markdown("---")
@@ -483,7 +552,7 @@ if "Open = Low" in scan_mode:
             help="Jumlah maksimal saham yang ditampilkan"
         )
     
-    # Opsi mode scanning
+    # Opsi mode scanning (tetap ada untuk backward compatibility)
     st.markdown("### 🔍 Mode Scanning")
     col1, col2 = st.columns(2)
     
@@ -499,7 +568,7 @@ if "Open = Low" in scan_mode:
         st.info(
             "⚡ **Cepat:** ±30 detik\n\n"
             "🐢 **Lengkap:** ±7-10 menit\n\n"
-            "Gunakan mode lengkap untuk analisis mendalam"
+            "Gunakan filter tingkatan untuk scanning lebih cepat"
         )
     
     periode_map = {
@@ -510,10 +579,13 @@ if "Open = Low" in scan_mode:
     
     # Tombol scan
     if st.button("🚀 MULAI SCANNING", type="primary", use_container_width=True):
-        # Tentukan stocks yang akan discan
-        if selected_stocks:
+        # Tentukan stocks yang akan discan berdasarkan filter
+        if filter_type == "Pilih Manual" and selected_stocks:
             stocks_to_scan = selected_stocks
+        elif filter_type == "Filter Tingkatan" and selected_levels:
+            stocks_to_scan = get_stocks_by_level(selected_levels)
         else:
+            # Default: berdasarkan scan_option
             if scan_option == "⚡ Cepat (50 saham)":
                 stocks_to_scan = STOCKS_LIST[:50]
             else:
@@ -600,7 +672,7 @@ if "Open = Low" in scan_mode:
                 unsafe_allow_html=True
             )
             
-            # ========== HASIL SCANNING + FREE FLOAT + FCA ==========
+            # ========== HASIL SCANNING + FREE FLOAT + FCA + TINGKATAN ==========
             st.markdown("### 📋 Hasil Scanning + Data Free Float + FCA")
             
             # Ambil data free float untuk setiap saham
@@ -609,6 +681,7 @@ if "Open = Low" in scan_mode:
                 saham = row['saham']
                 free_float = get_free_float_value(saham)
                 holders = get_free_float_holders(saham)
+                level = get_stock_level(saham)
                 
                 # Hitung total institusi + asing di free float
                 total_inst_asing = 0
@@ -618,10 +691,11 @@ if "Open = Low" in scan_mode:
                 
                 sisa_ritel = 100 - total_inst_asing
                 potensi = analyze_goreng_potential(free_float)
-                fca_status = '⚠️ YA' if is_fca(saham) else 'Tidak'
+                fca_status = '⚠️' if is_fca(saham) else ''
                 
                 enhanced_results.append({
                     'Saham': saham,
+                    'Level': level,
                     'Frek': row['frekuensi'],
                     'Prob': f"{row['probabilitas']:.0f}%",
                     'Gain': f"{row['rata_rata_kenaikan']:.0f}%",
@@ -663,7 +737,7 @@ if "Open = Low" in scan_mode:
                 analysis = analyze_pattern(row.to_dict())
                 
                 # Tampilkan dengan expander
-                with st.expander(f"📊 {row['saham']} - Prob: {row['probabilitas']:.1f}% | Gain: {row['rata_rata_kenaikan']:.1f}%"):
+                with st.expander(f"📊 {row['saham']} - {get_stock_level(row['saham'])} | Prob: {row['probabilitas']:.1f}%"):
                     col1, col2, col3, col4 = st.columns(4)
                     with col1:
                         st.metric("🎯 Probabilitas", f"{row['probabilitas']:.1f}%")
@@ -735,10 +809,16 @@ if "Open = Low" in scan_mode:
                     free_float = get_free_float_value(row['saham'])
                     potensi = analyze_goreng_potential(free_float)
                     fca_status = '⚠️' if is_fca(row['saham']) else ''
+                    level_singkat = {
+                        '💎 Blue Chip': 'BC',
+                        '📈 Second Liner': 'SL',
+                        '🎯 Third Liner': 'TL'
+                    }.get(get_stock_level(row['saham']), '')
                     
                     watchlist_data.append({
                         "Rank": i + 1,
                         "Saham": row['saham'],
+                        "Lvl": level_singkat,
                         "Prob": f"{row['probabilitas']:.0f}%",
                         "Gain": f"{row['rata_rata_kenaikan']:.0f}%",
                         "FF": f"{free_float:.0f}%",
@@ -783,9 +863,9 @@ if "Open = Low" in scan_mode:
                     else:
                         st.error("❌ Gagal")
                 
-                st.info("💡 Fokus ke 🔥 PRIORITAS dengan potensi 🔥 UT/ST. Waspadai ⚠️ FCA.")
+                st.info("💡 BC=Blue Chip, SL=Second Liner, TL=Third Liner | Fokus 🔥 PRIORITAS dengan 🔥 UT/ST. Waspadai ⚠️ FCA.")
             else:
-                st.warning(f"Tidak ada saham")
+                st.warning(f"Tidak ada saham dengan gain minimal {min_gain_filter}%")
             
             # Export data scanning
             st.markdown("### 📥 Export Data")
@@ -818,7 +898,7 @@ if "Open = Low" in scan_mode:
             st.markdown(
                 """
                 <div style="background: linear-gradient(135deg, #f093fb, #f5576c); padding: 20px; border-radius: 15px; text-align: center; color: white;">
-                    ⚠️ Tidak ditemukan saham
+                    ⚠️ Tidak ditemukan saham dengan kriteria Open=Low
                 </div>
                 """,
                 unsafe_allow_html=True
@@ -833,7 +913,17 @@ elif "Low Float" in scan_mode:
         max_ff = st.slider("📊 Maks Free Float (%)", 1, 50, 20, help="Free float di bawah nilai ini")
     
     with col2:
-        min_vol = st.number_input("📈 Min Volume", min_value=0, value=0, step=100000)
+        min_vol = st.number_input("📈 Min Volume", min_value=0, value=0, step=100000, help="Minimal volume rata-rata")
+    
+    # Filter tingkatan untuk low float scanner
+    st.markdown("### 🏷️ Filter Tingkatan")
+    col_lvl1, col_lvl2, col_lvl3 = st.columns(3)
+    with col_lvl1:
+        scan_blue = st.checkbox("Blue Chip 💎", value=True)
+    with col_lvl2:
+        scan_second = st.checkbox("Second Liner 📈", value=True)
+    with col_lvl3:
+        scan_third = st.checkbox("Third Liner 🎯", value=True)
     
     scan_option = st.radio(
         "Mode:",
@@ -842,14 +932,26 @@ elif "Low Float" in scan_mode:
         index=0
     )
     
-    if st.button("🚀 SCAN", type="primary", use_container_width=True):
+    if st.button("🚀 SCAN LOW FLOAT", type="primary", use_container_width=True):
+        # Tentukan stocks berdasarkan filter
+        selected_levels = []
+        if scan_blue:
+            selected_levels.append('Blue Chip')
+        if scan_second:
+            selected_levels.append('Second Liner')
+        if scan_third:
+            selected_levels.append('Third Liner')
+        
         if selected_stocks:
             stocks_to_scan = selected_stocks
         else:
-            if scan_option == "⚡ Cepat":
-                stocks_to_scan = STOCKS_LIST[:50]
+            if selected_levels:
+                stocks_to_scan = get_stocks_by_level(selected_levels)
             else:
-                stocks_to_scan = STOCKS_LIST
+                if scan_option == "⚡ Cepat":
+                    stocks_to_scan = STOCKS_LIST[:50]
+                else:
+                    stocks_to_scan = STOCKS_LIST
         
         with st.spinner(f"Scan {len(stocks_to_scan)} saham..."):
             results = scan_low_float(stocks_to_scan, max_ff, min_vol)
@@ -878,7 +980,12 @@ elif "Low Float" in scan_mode:
                     kategori = row['category']
                     kategori_singkat = get_kategori_singkatan(kategori)
                     potensi = analyze_goreng_potential(free_float)
-                    fca_status = '⚠️ YA' if is_fca(saham) else 'Tidak'
+                    fca_status = '⚠️' if is_fca(saham) else ''
+                    level_singkat = {
+                        '💎 Blue Chip': 'BC',
+                        '📈 Second Liner': 'SL',
+                        '🎯 Third Liner': 'TL'
+                    }.get(get_stock_level(saham), '')
                     
                     # Hitung komposisi free float
                     holders = get_free_float_holders(saham)
@@ -890,9 +997,10 @@ elif "Low Float" in scan_mode:
                     
                     enriched_results.append({
                         'Saham': saham,
+                        'Lvl': level_singkat,
                         'FF': f"{free_float:.0f}%",
                         'Kat': kategori_singkat,
-                        'Vol': f"{row['volume_avg']/1e6:.1f}M",
+                        'Vol(M)': f"{row['volume_avg']/1e6:.1f}",
                         'Volat': f"{row['volatility']:.0f}%",
                         'Inst': f"{total_inst_asing:.0f}%",
                         'Ritel': f"{sisa_ritel:.0f}%",
@@ -912,7 +1020,7 @@ elif "Low Float" in scan_mode:
                 st.markdown("### 🔍 Detail Free Float")
                 for _, row in df_results.head(5).iterrows():
                     free_float = get_free_float_value(row['saham'])
-                    with st.expander(f"📊 {row['saham']} - FF: {free_float:.0f}%"):
+                    with st.expander(f"📊 {row['saham']} - {get_stock_level(row['saham'])} | FF: {free_float:.0f}%"):
                         st.markdown(display_free_float_info(row['saham'], free_float), unsafe_allow_html=True)
                 
                 # Visualisasi
@@ -968,7 +1076,7 @@ elif "Low Float" in scan_mode:
                 st.markdown(
                     """
                     <div style="background: linear-gradient(135deg, #f093fb, #f5576c); padding: 20px; border-radius: 15px; text-align: center; color: white;">
-                        ⚠️ Tidak ditemukan
+                        ⚠️ Tidak ditemukan saham low float
                     </div>
                     """,
                     unsafe_allow_html=True
@@ -980,8 +1088,8 @@ st.markdown(
     """
     <div style='text-align: center; color: #666; font-size: 0.9rem;'>
         <p>⚠️ Data edukasi, bukan rekomendasi</p>
-        <p>Free Float: % saham beredar | Pemegang: Hanya di free float | FCA: Full Call Auction (Papan Pemantauan Khusus)</p>
-        <p>🔥 UT=UltraTinggi 🔥 ST=SangatTinggi ⚡ TG=Tinggi 📊 SD=Sedang 📉 RD=Rendah | ⚠️ FCA = Waspada Likuiditas</p>
+        <p>BC=Blue Chip, SL=Second Liner, TL=Third Liner | FF=Free Float | FCA=Full Call Auction</p>
+        <p>🔥 UT/ST=Ultra/Sangat Tinggi ⚡ TG=Tinggi 📊 SD=Sedang 📉 RD=Rendah</p>
     </div>
     """,
     unsafe_allow_html=True
