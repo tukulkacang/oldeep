@@ -25,7 +25,7 @@ SHAREHOLDER_DATA = {
             {'nama': 'BPJS Ketenagakerjaan', 'persen': 1.02, 'tipe': 'Institusi', 'catatan': 'Masuk Q4 2025', 'update': 'Feb 2026'},
             {'nama': 'Vanguard', 'persen': 1.15, 'tipe': 'Asing', 'catatan': 'Nambah Jan 2026', 'update': 'Feb 2026'}
         ],
-        'free_float': 13.73,  # 100% - 86.27%
+        'free_float': 13.73,
         'total_shares': 12345678900,
         'insider_activity': [
             {'tanggal': '05 Mar 2026', 'insider': 'Direktur Utama', 'aksi': 'BELI', 'jumlah': 100000, 'harga': 15000},
@@ -202,6 +202,15 @@ SHAREHOLDER_DATA = {
     }
 }
 
+# ========== DATA SAHAM FCA (Full Call Auction) ==========
+# Sumber: Pengumuman BEI (update berkala)
+# Saham yang masuk Papan Pemantauan Khusus dengan mekanisme FCA
+FCA_STOCKS = ['COIN', 'CDIA']  # Tambahkan sesuai update BEI
+
+def is_fca(stock_code):
+    """Cek apakah saham termasuk dalam daftar FCA"""
+    return stock_code in FCA_STOCKS
+
 # ========== FUNGSI UNTUK DATA FREE FLOAT ==========
 
 def get_free_float_holders(stock_code):
@@ -228,6 +237,11 @@ def display_free_float_info(stock_code, free_float_value):
     
     html = f"<div style='background-color: #1e1e1e; padding: 15px; border-radius: 10px; margin: 10px 0;'>"
     html += f"<h4 style='color: #ffd700; margin: 0 0 10px 0;'>📋 Pemegang di Free Float {stock_code}</h4>"
+    
+    # Status FCA
+    if is_fca(stock_code):
+        html += f"<p><span style='color: #ffaa00;'>⚠️ FCA (Full Call Auction) - Papan Pemantauan Khusus</span></p>"
+    
     html += f"<p><span style='color: #aaa;'>Free Float:</span> <span style='color: #00ff88; font-weight: bold;'>{free_float_value:.2f}%</span></p>"
     
     if free_float_holders:
@@ -397,7 +411,7 @@ st.markdown("""
 
 # Title
 st.markdown('<p class="main-header">📊 Screener Saham Indonesia</p>', unsafe_allow_html=True)
-st.markdown('<p class="info-text">Scanner Open=Low & Low Float dengan Data Free Float + Bandar Detector</p>', unsafe_allow_html=True)
+st.markdown('<p class="info-text">Scanner Open=Low & Low Float dengan Data Free Float + FCA (Full Call Auction)</p>', unsafe_allow_html=True)
 
 # Sidebar
 with st.sidebar:
@@ -432,7 +446,8 @@ with st.sidebar:
     - **Data:** Yahoo Finance + KSEI
     - **Free Float:** % saham beredar
     - **Pemegang:** Hanya di free float
-    - **Update:** Feb 2026
+    - **FCA:** Saham Papan Pemantauan Khusus
+    - **Update FCA:** Berdasarkan BEI
     """)
     
     st.markdown("---")
@@ -585,8 +600,8 @@ if "Open = Low" in scan_mode:
                 unsafe_allow_html=True
             )
             
-            # ========== HASIL SCANNING + FREE FLOAT ==========
-            st.markdown("### 📋 Hasil Scanning + Data Free Float")
+            # ========== HASIL SCANNING + FREE FLOAT + FCA ==========
+            st.markdown("### 📋 Hasil Scanning + Data Free Float + FCA")
             
             # Ambil data free float untuk setiap saham
             enhanced_results = []
@@ -603,16 +618,17 @@ if "Open = Low" in scan_mode:
                 
                 sisa_ritel = 100 - total_inst_asing
                 potensi = analyze_goreng_potential(free_float)
+                fca_status = '⚠️ YA' if is_fca(saham) else 'Tidak'
                 
                 enhanced_results.append({
                     'Saham': saham,
                     'Frek': row['frekuensi'],
                     'Prob': f"{row['probabilitas']:.0f}%",
                     'Gain': f"{row['rata_rata_kenaikan']:.0f}%",
-                    'Max': f"{row['max_kenaikan']:.0f}%",
                     'FF': f"{free_float:.0f}%",
                     'Inst': f"{total_inst_asing:.0f}%",
                     'Ritel': f"{sisa_ritel:.0f}%",
+                    'FCA': fca_status,
                     'Pot': potensi
                 })
             
@@ -661,7 +677,7 @@ if "Open = Low" in scan_mode:
                     st.markdown("**📋 Kesimpulan AI:**")
                     st.markdown(analysis)
                     
-                    # Tambah info free float
+                    # Tambah info free float + FCA
                     free_float = get_free_float_value(row['saham'])
                     st.markdown(display_free_float_info(row['saham'], free_float), unsafe_allow_html=True)
                     
@@ -718,6 +734,7 @@ if "Open = Low" in scan_mode:
                     
                     free_float = get_free_float_value(row['saham'])
                     potensi = analyze_goreng_potential(free_float)
+                    fca_status = '⚠️' if is_fca(row['saham']) else ''
                     
                     watchlist_data.append({
                         "Rank": i + 1,
@@ -725,6 +742,7 @@ if "Open = Low" in scan_mode:
                         "Prob": f"{row['probabilitas']:.0f}%",
                         "Gain": f"{row['rata_rata_kenaikan']:.0f}%",
                         "FF": f"{free_float:.0f}%",
+                        "FCA": fca_status,
                         "Pot": potensi,
                         "Rekom": rekom
                     })
@@ -765,7 +783,7 @@ if "Open = Low" in scan_mode:
                     else:
                         st.error("❌ Gagal")
                 
-                st.info("💡 Fokus ke 🔥 PRIORITAS dengan potensi 🔥 UT/ST")
+                st.info("💡 Fokus ke 🔥 PRIORITAS dengan potensi 🔥 UT/ST. Waspadai ⚠️ FCA.")
             else:
                 st.warning(f"Tidak ada saham")
             
@@ -807,7 +825,7 @@ if "Open = Low" in scan_mode:
             )
 
 elif "Low Float" in scan_mode:
-    st.markdown('<p class="sub-header">🔍 Scanner Low Float + Free Float</p>', unsafe_allow_html=True)
+    st.markdown('<p class="sub-header">🔍 Scanner Low Float + Free Float + FCA</p>', unsafe_allow_html=True)
     
     col1, col2 = st.columns(2)
     
@@ -850,7 +868,7 @@ elif "Low Float" in scan_mode:
                     unsafe_allow_html=True
                 )
                 
-                st.markdown("### 📋 Hasil + Free Float")
+                st.markdown("### 📋 Hasil + Free Float + FCA")
                 
                 # Ambil data free float
                 enriched_results = []
@@ -860,6 +878,7 @@ elif "Low Float" in scan_mode:
                     kategori = row['category']
                     kategori_singkat = get_kategori_singkatan(kategori)
                     potensi = analyze_goreng_potential(free_float)
+                    fca_status = '⚠️ YA' if is_fca(saham) else 'Tidak'
                     
                     # Hitung komposisi free float
                     holders = get_free_float_holders(saham)
@@ -877,6 +896,7 @@ elif "Low Float" in scan_mode:
                         'Volat': f"{row['volatility']:.0f}%",
                         'Inst': f"{total_inst_asing:.0f}%",
                         'Ritel': f"{sisa_ritel:.0f}%",
+                        'FCA': fca_status,
                         'Pot': potensi
                     })
                 
@@ -960,8 +980,8 @@ st.markdown(
     """
     <div style='text-align: center; color: #666; font-size: 0.9rem;'>
         <p>⚠️ Data edukasi, bukan rekomendasi</p>
-        <p>Free Float: % saham beredar | Pemegang: Hanya di free float</p>
-        <p>🔥 UT=UltraTinggi 🔥 ST=SangatTinggi ⚡ TG=Tinggi 📊 SD=Sedang 📉 RD=Rendah</p>
+        <p>Free Float: % saham beredar | Pemegang: Hanya di free float | FCA: Full Call Auction (Papan Pemantauan Khusus)</p>
+        <p>🔥 UT=UltraTinggi 🔥 ST=SangatTinggi ⚡ TG=Tinggi 📊 SD=Sedang 📉 RD=Rendah | ⚠️ FCA = Waspada Likuiditas</p>
     </div>
     """,
     unsafe_allow_html=True
