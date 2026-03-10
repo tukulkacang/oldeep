@@ -916,17 +916,22 @@ if "Open = Low" in scan_mode:
                     height=400
                 )
                 
-                # Export buttons - pake fungsi reusable
-                st.markdown("### 📥 Export Watchlist")
-                create_download_buttons(watchlist_df, "watchlist", "watchlist")
+                # ========== EXPORT SECTION DENGAN TABS ==========
+                st.markdown("## 📥 Export Data")
                 
-                st.info("💡 BC=Blue Chip, SL=Second Liner, TL=Third Liner | Fokus 🔥 PRIORITAS dengan 🔥 UT/ST. Waspadai ⚠️ FCA.")
+                tab_exp1, tab_exp2 = st.tabs(["📋 Watchlist", "📊 Hasil Scanning"])
+                
+                with tab_exp1:
+                    st.markdown("### Download Watchlist")
+                    create_download_buttons(watchlist_df, "watchlist", "watchlist_tab")
+                    st.info("💡 BC=Blue Chip, SL=Second Liner, TL=Third Liner | Fokus 🔥 PRIORITAS dengan 🔥 UT/ST. Waspadai ⚠️ FCA.")
+                
+                with tab_exp2:
+                    st.markdown("### Download Hasil Scanning")
+                    create_download_buttons(display_df, "scan", "scan_tab")
+                    
             else:
                 st.warning(f"Tidak ada saham dengan gain minimal {min_gain_filter}%")
-            
-            # Export data scanning - pake fungsi reusable
-            st.markdown("### 📥 Export Data Scanning")
-            create_download_buttons(display_df, "scan", "scan")
                     
         else:
             st.markdown(
@@ -1107,9 +1112,18 @@ elif "Low Float" in scan_mode:
                 )
                 st.plotly_chart(fig, use_container_width=True)
             
-            # Export
-            st.markdown("### 📥 Export Data")
-            create_download_buttons(enriched_df, "low_float", "low_float")
+            # Export dengan TABS juga biar konsisten
+            st.markdown("## 📥 Export Data")
+            tab_exp1, tab_exp2 = st.tabs(["📊 Hasil Low Float", "📋 Watchlist (Opsional)"])
+            
+            with tab_exp1:
+                st.markdown("### Download Hasil Low Float")
+                create_download_buttons(enriched_df, "low_float", "low_float_tab")
+            
+            with tab_exp2:
+                st.markdown("### Download Watchlist (buat sendiri)")
+                st.info("Gunakan hasil di atas untuk bikin watchlist manual")
+                
         else:
             st.markdown(
                 """
